@@ -204,7 +204,7 @@ const pd=s=>{if(!s)return null;const[a,b,c]=s.split('-').map(Number);return new 
 const addD=(d,n)=>new Date(d.getFullYear(),d.getMonth(),d.getDate()+n);
 const sp=n=>'&nbsp;'.repeat(n);
 
-let d={grade:'3',type:'day',ampm:'am',purpose:DEF_PURPOSE,form:'',plans:[],reps:[],appDate:today(),repDate:today(),daysManual:false};
+let d={grade:'3',type:'day',ampm:'am',purpose:DEF_PURPOSE,c1:true,safe:true,form:'',plans:[],reps:[],appDate:today(),repDate:today(),daysManual:false};
 const sig={appP:'',appS:'',repP:'',repS:''};
 const photos=[];
 let tab='app';
