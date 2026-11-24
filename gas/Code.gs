@@ -65,7 +65,7 @@ function doPost(e) {
   const lock = LockService.getScriptLock();
   lock.waitLock(25000);
   try {
-    const f = { submit: submit_, status: status_, mine: mine_, tlist: tlist_, tget: tget_, treview: treview_ }[b.action];
+    const f = { submit: submit_, draft: draft_, status: status_, mine: mine_, tlist: tlist_, tget: tget_, treview: treview_ }[b.action];
     return out_(f ? f(b) : { ok: false, msg: '알 수 없는 요청입니다.' });
   } catch (err) {
     return out_({ ok: false, msg: String(err && err.message || err) });
@@ -87,6 +87,41 @@ function student_(b) {
 function same_(r, s) { return String(r[C['학년']]) === s.grade && String(r[C['반']]) === s.cls && String(r[C['번호']]) === s.num && String(r[C['이름']]) === s.name; }
 
 /* 학생: 검토 요청(같은 학생·같은 서류·같은 시작일이면 덮어쓰기) */
+const DRAFT = '작성 중';
+function guard_(v, s, b) { // 같은 학생의 기존 행이 있으면 비밀번호·휴대폰이 같아야 함
+  const h = hash_(s.pin);
+  for (let i = 1; i < v.length; i++) {
+    if (String(v[i][C['학년']]) === s.grade && String(v[i][C['반']]) === s.cls && String(v[i][C['번호']]) === s.num) {
+      if (!same_(v[i], s)) throw new Error('같은 학번으로 다른 이름의 신청이 있습니다. 담임 선생님께 문의하세요.');
+      if (v[i][C['PIN']] !== h || (b.phone && !phoneOk_(v[i], b.phone))) throw new Error('처음 정한 비밀번호 또는 휴대폰 번호와 다릅니다.');
+    }
+  }
+  return h;
+}
+function dropDraft_(sh, s, prevId, keepId) { // 기간을 바꿔 저장하면 예전 '작성 중' 행은 지움
+  prevId = str_(prevId, 80);
+  if (!prevId || prevId === keepId) return;
+  const v = sh.getDataRange().getValues();
+  for (let i = v.length - 1; i >= 1; i--) if (v[i][C['ID']] === prevId && same_(v[i], s) && v[i][C['상태']] === DRAFT) { sh.deleteRow(i + 1); return; }
+}
+/* 학생: 보관함에 작성 중으로 저장(담임 목록에는 안 보임) */
+function draft_(b) {
+  const s = student_(b);
+  const doc = b.doc === 'rep' ? 'rep' : 'app';
+  const start = str_(b.start, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) throw new Error('체험학습 날짜를 먼저 정하세요.');
+  const id = [doc, s.grade, s.cls, s.num, start].join('-');
+  const t = rows_(), sh = t.sh, v = t.v, h = guard_(v, s, b);
+  let ri = -1;
+  for (let i = 1; i < v.length; i++) if (v[i][C['ID']] === id) { ri = i; break; }
+  if (ri > 0 && v[ri][C['상태']] !== DRAFT) return { ok: true, id: id, kept: true, status: String(v[ri][C['상태']]) };
+  const row = ["'" + id, DOCNAME[doc], s.grade, s.cls, s.num, "'" + s.name, "'" + str_(b.period, 60), "'" + str_(b.dest, 100),
+    DRAFT, '', now_(), '', '', 0, "'" + h, '', "'" + str_(JSON.stringify(b.data || {}), 40000)];
+  if (ri > 0) sh.getRange(ri + 1, 1, 1, row.length).setValues([row]); else sh.appendRow(row);
+  dropDraft_(sh, s, b.prevId, id);
+  return { ok: true, id: id, status: DRAFT };
+}
+
 function submit_(b) {
   const s = student_(b);
   const doc = b.doc === 'rep' ? 'rep' : 'app';
@@ -97,21 +132,19 @@ function submit_(b) {
   const t = rows_(); const sh = t.sh, v = t.v;
   let ri = -1;
   for (let i = 1; i < v.length; i++) if (v[i][C['ID']] === id) { ri = i; break; }
-  const h = hash_(s.pin);
-  if (ri > 0) {
-    if (!same_(v[ri], s)) throw new Error('같은 학번으로 다른 이름의 요청이 있습니다. 담임 선생님께 문의하세요.');
-    if (v[ri][C['PIN']] !== h) throw new Error('처음 요청할 때 정한 비밀번호와 다릅니다.');
-  }
+  const h = guard_(v, s, b);
   const fname = DOCNAME[doc] + '_' + s.grade + '-' + s.cls + '-' + s.num + '_' + s.name + '_' + start + '.pdf';
   const blob = Utilities.newBlob(Utilities.base64Decode(String(b.pdf)), 'application/pdf', fname);
   const file = folder_().createFile(blob);
   if (ri > 0 && v[ri][C['PDF파일ID']]) { try { DriveApp.getFileById(v[ri][C['PDF파일ID']]).setTrashed(true); } catch (e) { } }
-  const cnt = ri > 0 ? (Number(v[ri][C['요청횟수']]) || 1) + 1 : 1;
+  const sent = ri > 0 && v[ri][C['상태']] !== DRAFT;
+  const cnt = sent ? (Number(v[ri][C['요청횟수']]) || 1) + 1 : 1;
   const row = ["'" + id, DOCNAME[doc], s.grade, s.cls, s.num, "'" + s.name, "'" + str_(b.period, 60), "'" + str_(b.dest, 100),
     cnt > 1 ? '재검토 대기' : '검토 대기', ri > 0 && v[ri][C['보완사항']] ? "'" + v[ri][C['보완사항']] : '', now_(), ri > 0 && v[ri][C['검토시각']] ? "'" + txt_(v[ri][C['검토시각']]) : '', ri > 0 && v[ri][C['검토자']] ? "'" + v[ri][C['검토자']] : '',
     cnt, "'" + h, "'" + file.getId(), "'" + str_(JSON.stringify(b.data || {}), 40000)];
   if (ri > 0) sh.getRange(ri + 1, 1, 1, row.length).setValues([row]);
   else sh.appendRow(row);
+  dropDraft_(sh, s, b.prevId, id);
   return { ok: true, id: id, status: String(row[C['상태']]) };
 }
 
@@ -169,7 +202,7 @@ function inScope_(t, r) { return String(r[C['학년']]) === t.grade && String(r[
 
 function tlist_(b) {
   const t = teacher_(b), v = rows_().v, list = [];
-  for (let i = 1; i < v.length; i++) if (v[i][C['ID']] && inScope_(t, v[i])) list.push(pub_(v[i]));
+  for (let i = 1; i < v.length; i++) if (v[i][C['ID']] && v[i][C['상태']] !== DRAFT && inScope_(t, v[i])) list.push(pub_(v[i]));
   list.sort((a, c) => String(c.at).localeCompare(String(a.at)));
   return { ok: true, who: t.label, list: list };
 }

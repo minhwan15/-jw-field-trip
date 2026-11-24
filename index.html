@@ -111,6 +111,18 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .gbtn{width:100%;margin-top:14px;min-height:50px;font-size:16px}
 .gmsg{min-height:1.3em;margin:8px 0 0;font-size:14px;color:#e2553f}
 .gfoot{font-size:13px;color:var(--mute);margin-top:16px;text-align:center}
+#locker{padding:24px max(4vw,16px) 60px;max-width:1000px;margin:auto}
+.lhead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+.lhead h2{margin:0;font-size:24px}
+.lcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-top:12px}
+.lcard h3{margin:0 0 2px;font-size:18px}
+.lcard .lsub{color:var(--mute);font-size:14px;margin-bottom:8px}
+.lrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-top:1px dashed var(--line);padding:10px 0 6px}
+.lrow b.k{min-width:84px}
+.lrow .sp{flex:1}
+.lrow .cm{flex-basis:100%;margin:4px 0 0;padding:8px 10px;border-radius:8px;background:light-dark(#fff4e8,#3a2a19);white-space:pre-wrap;font-size:14px}
+.lempty{color:var(--mute);text-align:center;padding:40px 10px;background:var(--card);border:1px dashed var(--line);border-radius:16px;margin-top:12px}
+.badge.draft{background:#5c7cae}
 #who{display:flex;align-items:center;gap:10px;color:#fff;font-weight:500}
 #who .tbtn{min-height:38px;padding:6px 14px;font-size:14px}
 input[readonly]{background:light-dark(#f0f3f1,#1a201d);color:var(--mute)}
@@ -165,7 +177,7 @@ input[readonly]{background:light-dark(#f0f3f1,#1a201d);color:var(--mute)}
 </head>
 <body>
 <header>
-  <div class="htop"><h1>정왕고 체험학습 작성기</h1><div id="who" hidden><span id="whoName"></span><button class="tbtn" id="bLogout" type="button">로그아웃</button></div></div>
+  <div class="htop"><h1>정왕고 체험학습 작성기</h1><div id="who" hidden><span id="whoName"></span><button class="tbtn" id="bLocker" type="button">📁 내 보관함</button><button class="tbtn" id="bLogout" type="button">로그아웃</button></div></div>
   <p>입력하면 학교 양식(서식 1·2)에 그대로 채워집니다. 작성·출력이 곧 허가는 아니며, 담임교사의 최종 허가 통보를 받은 뒤 실시하세요.</p>
   <nav class="tabs" id="tabs" hidden><button id="tApp" class="on">서식 1 · 신청서</button><button id="tRep">서식 2 · 결과보고서</button></nav>
 </header>
@@ -198,6 +210,12 @@ input[readonly]{background:light-dark(#f0f3f1,#1a201d);color:var(--mute)}
     </form>
   </div>
   <p class="gfoot">작성·출력이 곧 허가는 아니며, 담임교사의 최종 허가 통보를 받은 뒤 실시하세요. 서명·사진은 이 기기 안에서만 쓰여요.</p>
+</section>
+<section id="locker" hidden>
+  <div class="lhead"><div><h2>📁 내 보관함</h2><p class="gsub" id="lWho"></p></div><button class="btn p" id="bNew" type="button">＋ 새 신청서 쓰기</button></div>
+  <p class="gsub">기간별로 신청서와 결과보고서가 묶여 있어요. 결과보고서는 해당 기간의 <b>결과보고서 쓰기</b>를 누르면 기간·목적지·보호자 정보가 그대로 옮겨져요.</p>
+  <div id="lMsg" class="gsub"></div>
+  <div id="lList"></div>
 </section>
 <main id="mainApp" hidden>
 <div id="form">
@@ -272,12 +290,12 @@ input[readonly]{background:light-dark(#f0f3f1,#1a201d);color:var(--mute)}
   <div id="msg"></div>
   <div id="issues"></div>
   <section id="rev" hidden>
-    <h3>담임 선생님 검토 · 내 신청</h3>
-    <p class="hint" style="margin:0 0 8px">다 썼으면 <b>점검 후 검토 요청</b>을 누르세요. 담임 선생님이 확인하면 아래에 결과가 표시돼요.</p>
+    <h3>담임 선생님 검토</h3>
+    <p class="hint" style="margin:0 0 8px">쓰는 중에는 <b>보관함에 저장</b>, 다 썼으면 <b>점검 후 검토 요청</b>을 누르세요. 결과는 <b>📁 내 보관함</b>에서 확인해요.</p>
+    <div id="curInfo" class="hint" style="margin:0 0 6px"></div>
     <input id="pin" type="hidden">
-    <div class="bar" style="margin:10px 0 0"><button class="btn p" id="bReq" type="button">점검 후 검토 요청</button><button class="btn" id="bStat" type="button">내 신청 새로고침</button><button class="btn" id="bNew" type="button">＋ 새 신청서 쓰기</button></div>
+    <div class="bar" style="margin:10px 0 0"><button class="btn p" id="bReq" type="button">점검 후 검토 요청</button><button class="btn" id="bDraft" type="button">💾 보관함에 저장</button></div>
     <div id="revMsg"></div>
-    <div id="revList"></div>
   </section>
   <div id="pv"></div>
   <p class="foot" id="foot"></p>
@@ -656,7 +674,7 @@ const pvRO=new ResizeObserver(fit);pvRO.observe($('#pv'));
 
 function setTab(t){tab=t;reviewed=false;pendingAct=null;$('#issues').innerHTML='';$$('.bad').forEach(x=>x.classList.remove('bad'));$('#tApp').classList.toggle('on',t==='app');$('#tRep').classList.toggle('on',t==='rep');
   $$('.app').forEach(x=>x.hidden=t!=='app');$$('.rep').forEach(x=>x.hidden=t!=='rep');$('#n4').textContent=t==='app'?4:3;$('#n5').textContent=t==='app'?5:4;
-  $$('.rep h2 b')[0].textContent=5;$$('.rep h2 b')[1].textContent=6;render()}
+  $$('.rep h2 b')[0].textContent=5;$$('.rep h2 b')[1].textContent=6;render();if(typeof curInfo==='function'&&document.getElementById('curInfo'))curInfo()}
 $('#tApp').onclick=()=>setTab('app');$('#tRep').onclick=()=>setTab('rep');
 
 /* 출력 */
@@ -709,22 +727,62 @@ const blob64=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>re
 const who=()=>({grade:d.grade,cls:d.cls,num:d.num,name:(d.name||'').replace(/\s+/g,''),phone:d.phone||'',pin:$('#pin').value.trim()});
 function pinOk(){const v=$('#pin').value.trim();if(/^\d{4}$/.test(v))return true;
   $('#pin').classList.add('bad');$('#pin').focus();say('검토 비밀번호 숫자 4자리를 입력하세요.');return false}
-let lastList=[];
-function showList(list){
-  lastList=list;
-  const cls=s=>s==='승인'?'ok':s==='보완 요청'?'fix':'';
-  $('#revList').innerHTML=!list.length?'<p class="hint" style="margin-top:8px">아직 보낸 검토 요청이 없어요.</p>':list.map(x=>`<div class="rq"><div class="top"><b>${esc(x.doc)} · ${esc(x.period||'')}</b><span class="badge ${cls(x.status)}">${esc(x.status)}</span></div>
-    ${x.comment?`<div class="cm"><b>보완 사항</b>\n${esc(x.comment)}</div>`:''}
-    <div class="meta">요청 ${esc(x.at)}${x.count>1?` (${esc(x.count)}번째)`:''}${x.reviewedAt?` · 검토 ${esc(x.reviewedAt)}`:''}</div>
-    <div class="acts"><button class="btn s" type="button" data-load="${esc(x.id)}">이 내용 불러오기</button>${x.doc==='신청서'?`<button class="btn s" type="button" data-load="${esc(x.id)}" data-asrep="1">${lastList.some(y=>y.id===x.id.replace(/^app-/,'rep-'))?'결과보고서 이어 쓰기':'결과보고서 쓰기'}</button>`:''}</div>
-    ${x.status==='승인'?'<div class="meta" style="color:#2e8b57">승인되었어요. [점검 후 이미지 저장]으로 최종본을 저장해 제출하세요.</div>':x.status==='보완 요청'?'<div class="meta">위 내용을 고친 뒤 [점검 후 검토 요청]을 다시 누르세요.</div>':''}</div>`).join('');
+/* ── 내 보관함: 기간별 신청서·결과보고서 ── */
+let curId=null,dirty=false,lastList=[];
+const BADGE=st=>`<span class="badge ${st==='승인'?'ok':st==='보완 요청'?'fix':st==='작성 중'?'draft':''}">${esc(st)}</span>`;
+const startOf=id=>String(id).slice(-10);
+const md2=s=>{const x=pd(s);return x?`${x.getMonth()+1}/${x.getDate()}(${WD[x.getDay()]})`:''};
+function showView(v){$('#locker').hidden=v!=='locker';$('#mainApp').hidden=v!=='editor';$('#tabs').hidden=v!=='editor';window.scrollTo(0,0)}
+function curInfo(){const id=curId,doc=tab==='app'?'신청서':'결과보고서';$('#curInfo').innerHTML=id&&id.startsWith(tab==='app'?'app-':'rep-')?`지금 쓰는 서류: <b>${doc}</b> · 보관함에 저장됨`:`지금 쓰는 서류: <b>새 ${doc}</b> · 아직 보관함에 없음`}
+async function showLocker(){
+  showView('locker');$('#lWho').textContent=$('#whoName').textContent;
+  if(!API){$('#lList').innerHTML='<p class="lempty">검토 서버가 연결되지 않아 보관함을 쓸 수 없어요.</p>';return}
+  $('#lMsg').textContent='보관함을 불러오는 중…';$('#lList').innerHTML='';
+  try{const j=await api({action:'status',...who()});lastList=j.list;$('#lMsg').textContent='';drawLocker()}
+  catch(e){$('#lMsg').textContent='❌ '+e.message}
 }
-async function loadStatus(silent){
-  if(!pinOk())return;
-  if(!d.name||!d.cls||!d.num||!d.phone){$('#revMsg').textContent='학년·반·번호·성명·휴대폰을 모두 입력하세요.';$('#revMsg').style.color='#e2553f';return}
-  if(!silent){$('#revMsg').textContent='검토 현황을 불러오는 중…';$('#revMsg').style.color=''}
-  try{const j=await api({action:'status',...who()});showList(j.list);if(!silent)$('#revMsg').textContent=j.list.length?`검토 요청 ${j.list.length}건을 불러왔어요.`:''}
-  catch(e){if(!silent){$('#revMsg').textContent='❌ '+e.message;$('#revMsg').style.color='#e2553f'}}
+function drawLocker(){
+  const g=new Map();
+  lastList.forEach(x=>{const k=startOf(x.id);if(!g.has(k))g.set(k,{});g.get(k)[x.id.startsWith('rep-')?'rep':'app']=x});
+  const keys=[...g.keys()].sort();
+  if(!keys.length){$('#lList').innerHTML='<p class="lempty">아직 저장한 신청이 없어요.<br><b>＋ 새 신청서 쓰기</b>로 시작하세요.</p>';return}
+  $('#lList').innerHTML=keys.map(k=>{const {app,rep}=g.get(k),base=app||rep;
+    const p=String(base.period||'');const m=p.match(/(\d{4}-\d{2}-\d{2})\s*~\s*(\d{4}-\d{2}-\d{2})/);
+    const title=m?`${md2(m[1])} ~ ${md2(m[2])}`:md2(k)+(/반일/.test(p)?' 반일':'');
+    const row=(lab,x,btns)=>`<div class="lrow"><b class="k">${lab}</b>${x?BADGE(x.status):'<span class="badge" style="background:#b8c2bd">아직 없음</span>'}<span class="sp"></span>${btns}${x&&x.comment&&x.status==='보완 요청'?`<div class="cm"><b>보완 사항</b>\n${esc(x.comment)}</div>`:''}</div>`;
+    return `<div class="lcard"><h3>${esc(title)}</h3><div class="lsub">${esc(base.dest||'')}${base.at?` · 최근 저장 ${esc(base.at)}`:''}</div>
+      ${row('신청서',app,app?`<button class="btn s" data-open="${esc(app.id)}">열기</button>`:'')}
+      ${row('결과보고서',rep,rep?`<button class="btn s" data-open="${esc(rep.id)}">열기</button>`:app&&app.status!=='작성 중'?`<button class="btn s p" data-asrep="${esc(app.id)}">결과보고서 쓰기</button>`:app?'<span class="gsub" style="margin:0">신청서 검토 요청 후 쓸 수 있어요</span>':'')}</div>`}).join('');
+}
+async function openItem(id,asRep){
+  $('#lMsg').textContent='불러오는 중…';
+  try{
+    const j=await api({action:'mine',...who(),id});const src={...j.data};delete src._sig;delete src._ph;
+    const keep={grade:d.grade,cls:d.cls,num:d.num,name:d.name,phone:d.phone};
+    Object.keys(d).forEach(k=>delete d[k]);Object.assign(d,{plans:[],reps:[]},src,keep);
+    if(asRep){if(!d.repDate)d.repDate=today();}
+    Object.keys(sig).forEach(k=>sig[k]='');Object.keys(sigRaw).forEach(k=>sigRaw[k]='');photos.length=0;$$('[data-sig] canvas').forEach(c=>c.getContext('2d').clearRect(0,0,c.width,c.height));
+    curId=asRep?null:id;dirty=false;save();showView('editor');fill();lockId(true);modeUI();buildDays();drawTerms();setTab(asRep||id.startsWith('rep-')?'rep':'app');curInfo();$('#lMsg').textContent='';
+    $('#revMsg').textContent=asRep?'신청서의 기본 정보를 옮겨 왔어요. 결과보고서 내용·사진·서명을 채워 주세요.':'불러왔어요. 서명·사진은 다시 해 주세요.';$('#revMsg').style.color='#2e8b57';
+  }catch(e){$('#lMsg').textContent='❌ '+e.message}
+}
+function newApp(){
+  const keep={grade:d.grade,cls:d.cls,num:d.num,name:d.name,phone:d.phone};
+  Object.keys(d).forEach(k=>delete d[k]);Object.assign(d,{type:'day',ampm:'am',purpose:DEF_PURPOSE,form:'',plans:[],reps:[],appDate:today(),repDate:today(),daysManual:false,c1:true,safe:true},keep);
+  Object.keys(sig).forEach(k=>sig[k]='');Object.keys(sigRaw).forEach(k=>sigRaw[k]='');photos.length=0;$$('[data-sig] canvas').forEach(c=>c.getContext('2d').clearRect(0,0,c.width,c.height));
+  curId=null;dirty=false;save();showView('editor');fill();lockId(true);modeUI();autoDays();buildDays();drawTerms();setTab('app');curInfo();$('#revMsg').textContent='';
+}
+const periodLabel=()=>d.type==='half'?`${d.hdate} 반일(${d.ampm==='am'?'오전':'오후'})`:`${d.start} ~ ${d.end||d.start}`;
+const prevFor=()=>curId&&curId.startsWith(tab==='app'?'app-':'rep-')?curId:'';
+async function saveDraft(silent){
+  const s=pd(d.type==='half'?d.hdate:d.start);
+  if(!s){if(!silent){$('#revMsg').textContent='체험학습 기간을 먼저 정해야 보관함에 저장할 수 있어요.';$('#revMsg').style.color='#e2553f'}return false}
+  if(!silent){$('#revMsg').textContent='보관함에 저장하는 중…';$('#revMsg').style.color=''}
+  try{
+    const j=await api({action:'draft',doc:tab,...who(),start:key(s),period:periodLabel(),dest:d.dest,data:d,prevId:prevFor()});
+    if(j.kept){$('#revMsg').textContent=`이 기간 ${tab==='app'?'신청서':'결과보고서'}는 이미 검토 요청했어요(${j.status}). 고친 내용은 다시 [점검 후 검토 요청]을 눌러야 반영돼요.`;$('#revMsg').style.color='#d9731e';return true}
+    curId=j.id;dirty=false;curInfo();$('#revMsg').textContent='💾 보관함에 저장했어요.';$('#revMsg').style.color='#2e8b57';return true;
+  }catch(e){$('#revMsg').textContent='❌ 저장 실패: '+e.message;$('#revMsg').style.color='#e2553f';return false}
 }
 const doReq=async()=>{
   const s=pd(d.type==='half'?d.hdate:d.start);
@@ -735,11 +793,10 @@ const doReq=async()=>{
     step('1/2 서류를 만드는 중…');
     const pdf=await blob64(await makePdf());
     step('2/2 담임 선생님께 보내는 중…');
-    const j=await api({action:'submit',doc:tab,...who(),start:key(s),period:d.type==='half'?`${d.hdate} 반일(${d.ampm==='am'?'오전':'오후'})`:`${d.start} ~ ${d.end}`,dest:d.dest,data:{...d,_sig:{appP:!!sig.appP,appS:!!sig.appS,repP:!!sig.repP,repS:!!sig.repS},_ph:[0,1,2,3,4].map(i=>!!photos[i])},pdf});
-    const nm=tab==='app'?'신청서':'결과보고서';
+    const j=await api({action:'submit',doc:tab,...who(),start:key(s),period:periodLabel(),dest:d.dest,prevId:prevFor(),data:{...d,_sig:{appP:!!sig.appP,appS:!!sig.appS,repP:!!sig.repP,repS:!!sig.repS},_ph:[0,1,2,3,4].map(i=>!!photos[i])},pdf});
+    const nm=tab==='app'?'신청서':'결과보고서';curId=j.id;dirty=false;curInfo();
     $('#revMsg').textContent=`✅ ${nm} 검토 요청 완료 (${j.status})`;$('#revMsg').style.color='#2e8b57';
-    modal(`<h3><span class="big">✅</span>전송 완료</h3><p>${nm} 검토 요청을 담임 선생님께 보냈어요. 상태: <b>${esc(j.status)}</b></p><p style="color:var(--mute);font-size:14px">담임 선생님이 확인하면 <b>[내 검토 현황]</b>에서 승인 또는 보완 사항을 볼 수 있어요. 비밀번호 <b>${esc(who().pin)}</b>를 기억해 두세요.</p>`,[{label:'확인',p:true}]);
-    await loadStatus(true);
+    modal(`<h3><span class="big">✅</span>전송 완료</h3><p>${nm} 검토 요청을 담임 선생님께 보냈어요. 상태: <b>${esc(j.status)}</b></p><p style="color:var(--mute);font-size:14px">담임 선생님의 승인·보완 사항은 <b>📁 내 보관함</b>에서 확인해요.</p>`,[{label:'내 보관함 보기',p:true,fn:showLocker},{label:'계속 보기'}]);
   }catch(e){
     $('#revMsg').textContent='❌ 전송 실패: '+e.message;$('#revMsg').style.color='#e2553f';
     modal(`<h3>전송하지 못했어요</h3><p>${esc(e.message)}</p><p style="color:var(--mute);font-size:14px">잠시 후 다시 눌러 주세요. 계속 안 되면 이미지를 저장해 담임 선생님께 직접 보내 주세요.</p>`,[{label:'확인',p:true}]);
@@ -750,31 +807,12 @@ if(API){
   $('#rev').hidden=false;
   $('#pin').addEventListener('input',e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,4);e.target.classList.remove('bad')});
   $('#bReq').onclick=()=>{if(!pinOk())return;run('req',doReq)};
-  $('#bStat').onclick=()=>loadStatus(false);
-  $('#bNew').onclick=()=>modal('<h3>새 신청서를 쓸까요?</h3><p>학생 정보만 남기고 작성칸을 비워요. 이미 보낸 신청은 서버에 그대로 저장돼 있어서, 아래 목록에서 언제든 다시 불러올 수 있어요.</p>',
-    [{label:'새로 쓰기',p:true,fn:()=>{const keep={grade:d.grade,cls:d.cls,num:d.num,name:d.name,phone:d.phone};
-      Object.keys(d).forEach(k=>delete d[k]);Object.assign(d,{type:'day',ampm:'am',purpose:DEF_PURPOSE,form:'',plans:[],reps:[],appDate:today(),repDate:today(),daysManual:false,c1:true,safe:true},keep);
-      Object.keys(sig).forEach(k=>sig[k]='');Object.keys(sigRaw).forEach(k=>sigRaw[k]='');photos.length=0;$$('[data-sig] canvas').forEach(c=>c.getContext('2d').clearRect(0,0,c.width,c.height));save();fill();lockId(true);modeUI();buildDays();drawTerms();setTab('app');
-      $$('[data-sig] canvas').forEach(c=>c.getContext('2d').clearRect(0,0,c.width,c.height));
-      $('#revMsg').textContent='새 신청서를 쓰고 있어요. 이전 신청은 아래 목록에 있어요.';$('#revMsg').style.color='#2e8b57';window.scrollTo({top:0,behavior:'smooth'})}},{label:'취소'}]);
-  $('#revList').addEventListener('click',async e=>{
-    let id=e.target.dataset?.load;if(!id)return;
-    const asRep=!!e.target.dataset.asrep,repId=id.replace(/^app-/,'rep-');
-    if(asRep&&lastList.some(y=>y.id===repId))id=repId; // 이미 보낸 보고서가 있으면 그 내용으로
-    const go=async()=>{
-      $('#revMsg').textContent='신청 내용을 불러오는 중…';$('#revMsg').style.color='';
-      try{
-        const j=await api({action:'mine',...who(),id});const src={...j.data};delete src._sig;delete src._ph;
-        const keep={grade:d.grade,cls:d.cls,num:d.num,name:d.name,phone:d.phone};
-        Object.keys(d).forEach(k=>delete d[k]);Object.assign(d,{plans:[],reps:[]},src,keep);
-        Object.keys(sig).forEach(k=>sig[k]='');Object.keys(sigRaw).forEach(k=>sigRaw[k]='');photos.length=0;$$('[data-sig] canvas').forEach(c=>c.getContext('2d').clearRect(0,0,c.width,c.height));
-        save();fill();lockId(true);modeUI();buildDays();drawTerms();setTab(asRep||j.item.doc==='결과보고서'?'rep':'app');
-        $('#revMsg').textContent=`✅ ${j.item.doc}(${j.item.period}) 내용을 불러왔어요. 서명·사진은 다시 해 주세요.`;$('#revMsg').style.color='#2e8b57';
-        window.scrollTo({top:0,behavior:'smooth'});
-      }catch(err){$('#revMsg').textContent='❌ '+err.message;$('#revMsg').style.color='#e2553f'}
-    };
-    modal(asRep?'<h3>이 신청의 결과보고서를 쓸까요?</h3><p>신청서 내용(기간·목적지·보호자)을 불러와 결과보고서 탭으로 이동해요. 지금 작성칸 내용은 바뀌어요. 서명·사진은 다시 해야 해요.</p>':'<h3>이 신청 내용을 불러올까요?</h3><p>지금 작성칸에 있는 내용이 보낸 신청 내용으로 바뀌어요. 서명·사진은 저장되지 않아서 다시 해야 해요.</p>',[{label:'불러오기',p:true,fn:go},{label:'취소'}]);
-  });
+  $('#bDraft').onclick=()=>saveDraft(false);
+  $('#bNew').onclick=newApp;
+  $('#lList').addEventListener('click',e=>{const o=e.target.dataset?.open,r=e.target.dataset?.asrep;
+    if(o)openItem(o,false);else if(r){const repId=r.replace(/^app-/,'rep-');lastList.some(y=>y.id===repId)?openItem(repId,false):openItem(r,true)}});
+  $('#bLocker').onclick=async()=>{if(!$('#mainApp').hidden&&dirty)await saveDraft(true);showLocker()};
+  document.addEventListener('input',e=>{if(e.target.closest&&e.target.closest('#form'))dirty=true});
 }
 $('#foot').innerHTML=`서명·사진은 이 브라우저 안에서만 쓰이며 어디에도 전송되지 않습니다. 글 입력 내용은 이 기기에만 임시 저장됩니다.<br>공유는 자동 전송이 아니므로 받는 사람(담임 선생님)을 직접 확인하고 보내세요.${API?' 검토 요청을 보내면 신청서 PDF가 학교 구글 드라이브에 저장되어 담임 선생님이 확인합니다.':''}<br><a href="teacher.html">담임용 검토 화면</a>`;
 
@@ -786,10 +824,10 @@ function enter(sv){
   const same=d.name===sv.name&&String(d.cls)===sv.cls&&String(d.num)===sv.num&&String(d.grade)===sv.grade;
   if(d.name&&!same){Object.keys(d).forEach(k=>delete d[k]);Object.assign(d,{type:'day',ampm:'am',purpose:DEF_PURPOSE,form:'',plans:[],reps:[],appDate:today(),repDate:today(),daysManual:false,c1:true,safe:true})}
   Object.assign(d,{grade:sv.grade,cls:sv.cls,num:sv.num,name:sv.name,phone:sv.phone});save();
-  $('#pin').value=sv.pin;$('#gate').hidden=true;$('#mainApp').hidden=false;$('#tabs').hidden=false;$('#who').hidden=false;
+  $('#pin').value=sv.pin;$('#gate').hidden=true;$('#who').hidden=false;
   $('#whoName').textContent=`${sv.grade}-${sv.cls} ${sv.num}번 ${sv.name}`;
   fill();lockId(true);modeUI();autoDays();buildDays();drawTerms();setTab('app');
-  if(API)loadStatus(true);
+  if(API){showLocker()}else showView('editor');
 }
 let SES=null;try{SES=JSON.parse(sessionStorage.getItem('jw-s')||'null')}catch(e){}
 $('#sc').addEventListener('input',e=>e.target.value=e.target.value.replace(/\D/g,''));
