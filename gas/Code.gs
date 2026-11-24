@@ -10,11 +10,12 @@
  *       - 액세스 권한이 있는 사용자: 모든 사용자
  *     → 배포 → 나온 웹 앱 URL(…/exec)을 앱 config.js에 넣습니다
  *  4) '설정' 탭에 반별 담임 비밀번호를 적습니다
+ *  5) (선택) 담임 기록함 연동: 시트 메뉴 [체험학습] → [기록함 연동 설정]에서 기록함 주소와 연동 키 입력
  *
  * 코드를 고친 뒤에는 배포 → 배포 관리 → 수정(연필) → 버전: 새 버전 → 배포 (URL은 그대로 유지)
  */
 const SHEET = '신청', CONF = '설정', FOLDER_NAME = '체험학습_검토_PDF';
-const HEAD = ['ID', '구분', '학년', '반', '번호', '이름', '기간', '목적지', '상태', '보완사항', '요청시각', '검토시각', '검토자', '요청횟수', 'PIN', 'PDF파일ID', '데이터'];
+const HEAD = ['ID', '구분', '학년', '반', '번호', '이름', '기간', '목적지', '상태', '보완사항', '요청시각', '검토시각', '검토자', '요청횟수', 'PIN', 'PDF파일ID', '데이터', '기록함'];
 const C = {}; HEAD.forEach((h, i) => C[h] = i);
 const DOCNAME = { app: '신청서', rep: '결과보고서' };
 
@@ -171,6 +172,56 @@ function tget_(b) {
   try { data = JSON.parse(f.r[C['데이터']] || '{}'); } catch (e) { }
   return { ok: true, item: pub_(f.r), pdf: pdf, data: data };
 }
+/* ── 담임 기록함(class-calendar) 연동: 승인 시 해당 반 기록함에 체험학습 기록 등록 ── */
+const HOLIDAYS = ['2026-12-25', '2027-01-01'];
+function onOpen() {
+  SpreadsheetApp.getUi().createMenu('체험학습').addItem('기록함 연동 설정', 'setupClassCalendar').addItem('기록함 연동 끄기', 'disableClassCalendar').addToUi();
+}
+function setupClassCalendar() {
+  const ui = SpreadsheetApp.getUi(), p = PropertiesService.getScriptProperties();
+  const u = ui.prompt('기록함 연동 (1/2)', '담임 기록함 주소를 입력하세요. 예: https://class-calendar.vercel.app', ui.ButtonSet.OK_CANCEL);
+  if (u.getSelectedButton() !== ui.Button.OK) return;
+  const url = String(u.getResponseText()).trim().replace(/\/+$/, '');
+  if (!/^https:\/\/[^\s/]+$/.test(url)) { ui.alert('주소 형식이 맞지 않습니다. https://로 시작하는 기본 주소만 입력하세요.'); return; }
+  const k = ui.prompt('기록함 연동 (2/2)', '기록함 Vercel 환경변수 EXPERIENCE_INTAKE_KEY와 같은 연동 키를 입력하세요.', ui.ButtonSet.OK_CANCEL);
+  if (k.getSelectedButton() !== ui.Button.OK) return;
+  const key = String(k.getResponseText()).trim();
+  if (key.length < 16) { ui.alert('연동 키는 16자 이상이어야 합니다.'); return; }
+  p.setProperty('CC_URL', url); p.setProperty('CC_KEY', key);
+  ui.alert('저장했습니다. 이제 담임이 승인하면 해당 반 기록함에 체험학습 기록이 자동으로 등록됩니다.');
+}
+function disableClassCalendar() { const p = PropertiesService.getScriptProperties(); p.deleteProperty('CC_URL'); p.deleteProperty('CC_KEY'); SpreadsheetApp.getUi().alert('기록함 연동을 껐습니다.'); }
+function schoolDays_(s, e) { // 주말·휴일을 뺀 수업일(나이스 입력 날짜)
+  const out = [], p = x => { const m = String(x).split('-').map(Number); return Date.UTC(m[0], m[1] - 1, m[2]); };
+  for (let t = p(s); t <= p(e) && out.length < 60; t += 864e5) {
+    const d = new Date(t), k = d.toISOString().slice(0, 10), w = d.getUTCDay();
+    if (w !== 0 && w !== 6 && HOLIDAYS.indexOf(k) < 0) out.push(k);
+  }
+  return out;
+}
+function pushClassCalendar_(r) {
+  const p = PropertiesService.getScriptProperties(), url = p.getProperty('CC_URL'), key = p.getProperty('CC_KEY');
+  if (!url || !key) return { ok: false, off: true, msg: '기록함 연동 꺼짐' };
+  let d = {}; try { d = JSON.parse(r[C['데이터']] || '{}'); } catch (e) { }
+  const g = String(r[C['학년']]), c = String(r[C['반']]).padStart(2, '0'), n = String(r[C['번호']]).padStart(2, '0');
+  const doc = r[C['구분']] === '결과보고서' ? 'rep' : 'app', half = d.type === 'half';
+  const start = half ? d.hdate : d.start, end = half ? d.hdate : (d.end || d.start);
+  if (!start) return { ok: false, msg: '기간 정보가 없어 기록함에 보내지 못했습니다' };
+  let pdf = '';
+  try { const bytes = DriveApp.getFileById(r[C['PDF파일ID']]).getBlob().getBytes(); if (bytes.length <= 3 * 1024 * 1024) pdf = Utilities.base64Encode(bytes); } catch (e) { }
+  const purpose = String(d.title || d.purpose || '').trim(), form = String(d.form || '').trim();
+  const payload = { intakeId: String(r[C['ID']]), doc: doc, username: g + c, studentId: g + c + n, studentName: String(r[C['이름']]),
+    startDate: start, endDate: end, attendanceDates: half ? [start] : schoolDays_(start, end), location: String(d.dest || ''),
+    reason: (form ? form + (purpose ? ' - ' : '') : '') + purpose + (half ? ' (반일 ' + (d.ampm === 'pm' ? '오후' : '오전') + ')' : ''),
+    approvedAt: String(now_()).replace(/^'/, ''), pdf: pdf };
+  try {
+    const res = UrlFetchApp.fetch(url + '/api/experience-intake', { method: 'post', contentType: 'application/json', headers: { 'x-intake-key': key }, payload: JSON.stringify(payload), muteHttpExceptions: true, followRedirects: false });
+    let j = {}; try { j = JSON.parse(res.getContentText()); } catch (e) { }
+    if (res.getResponseCode() === 200 && j.ok) return { ok: true, msg: j.created ? '기록함에 새 체험학습 기록 등록' : '기록함 체험학습 기록 갱신' };
+    return { ok: false, msg: '기록함 등록 실패: ' + (j.message || j.error || ('HTTP ' + res.getResponseCode())) };
+  } catch (e) { return { ok: false, msg: '기록함에 연결하지 못했습니다' }; }
+}
+
 function treview_(b) {
   const t = teacher_(b), f = find_(t, str_(b.id, 80));
   const st = b.status === '승인' ? '승인' : '보완 요청';
@@ -179,5 +230,12 @@ function treview_(b) {
   f.sh.getRange(f.i + 1, C['상태'] + 1, 1, 1).setValue(st);
   f.sh.getRange(f.i + 1, C['보완사항'] + 1, 1, 1).setValue(cm ? "'" + cm : '');
   f.sh.getRange(f.i + 1, C['검토시각'] + 1, 1, 2).setValues([[now_(), "'" + t.label]]);
-  return { ok: true, status: st };
+  let sync = null;
+  if (st === '승인') {
+    const hd = f.sh.getRange(1, C['기록함'] + 1);
+    if (hd.getValue() !== '기록함') hd.setValue('기록함');
+    sync = pushClassCalendar_(f.r);
+    if (!sync.off) f.sh.getRange(f.i + 1, C['기록함'] + 1).setValue("'" + (sync.ok ? '✔ ' : '✖ ') + sync.msg + ' (' + String(now_()).replace(/^'/, '') + ')');
+  }
+  return { ok: true, status: st, sync: sync };
 }

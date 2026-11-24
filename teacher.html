@@ -279,7 +279,7 @@ async function review(st){
   const cm=$('#cm').value.trim();
   if(st==='보완 요청'&&!cm){$('#cm').focus();say('보완할 내용을 적어 주세요.',true);return}
   $('#bOk').disabled=$('#bFix').disabled=$('#bOk2').disabled=true;say('저장하는 중…');
-  try{await api({action:'treview',...cred,id:cur.id,status:st,comment:cm});const id=cur.id,nm=cur.name;await load();await open(id);say(`${nm} 학생: ${st} 처리했어요. 학생이 앱의 [내 검토 현황]에서 확인합니다.`)}
+  try{const rv=await api({action:'treview',...cred,id:cur.id,status:st,comment:cm});const id=cur.id,nm=cur.name;await load();await open(id);const sy=rv.sync&&!rv.sync.off?` · ${rv.sync.ok?'✔':'⚠️'} ${rv.sync.msg}`:'';say(`${nm} 학생: ${st} 처리했어요${sy}. 학생이 앱의 [내 검토 현황]에서 확인합니다.`,rv.sync&&!rv.sync.ok&&!rv.sync.off)}
   catch(e){say(e.message,true);$('#bOk').disabled=$('#bFix').disabled=false}
 }
 $('#filters').addEventListener('click',e=>{const f=e.target.closest('[data-f]');if(f){filter=f.dataset.f;drawList()}});
