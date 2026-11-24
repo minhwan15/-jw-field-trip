@@ -58,6 +58,10 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 #issues li{display:flex;gap:8px;align-items:flex-start;padding:3px 0}
 #issues li button{flex:none;border:0;border-radius:6px;font:inherit;font-size:12px;font-weight:700;padding:3px 8px;cursor:pointer;color:#fff;background:var(--warn)}
 #issues li.w button{background:#d99a1e}
+#issues .act{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+#issues .act button{border:1px solid var(--g);background:transparent;color:var(--ink);font:inherit;font-size:13px;font-weight:500;border-radius:8px;padding:6px 12px;min-height:36px;cursor:pointer}
+#issues .act button.go{background:var(--g);color:#fff}
+#issues small{color:var(--mute)}
 .bad{border-color:var(--warn)!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--warn) 35%,transparent)}
 #forms.bad{border:0;box-shadow:none;outline:2px solid var(--warn);outline-offset:4px;border-radius:8px}
 #plans.bad{box-shadow:none}
@@ -155,7 +159,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
   <button class="btn" id="reset" type="button">입력 내용 모두 지우기</button>
 </div>
 <div id="side">
-  <div class="bar"><button class="btn p" id="bCheck">검토하기</button><button class="btn" id="bPdf">PDF 저장</button><button class="btn" id="bShare">PDF 공유</button><button class="btn" id="bPrint">인쇄</button></div>
+  <div class="bar"><button class="btn p" id="bDone">점검 후 PDF 저장</button><button class="btn" id="bShare">점검 후 공유</button><button class="btn" id="bPrint">점검 후 인쇄</button></div>
   <div id="msg"></div>
   <div id="issues"></div>
   <div id="pv"></div>
@@ -210,7 +214,7 @@ function fill(){
 const telFmt=v=>{const n=v.replace(/\D/g,'').slice(0,11);return n.length<4?n:n.length<8?n.slice(0,3)+'-'+n.slice(3):n.slice(0,3)+'-'+n.slice(3,n.length-4)+'-'+n.slice(-4)};
 document.addEventListener('input',e=>{
   const el=e.target,k=el.dataset?.k;
-  pending='';
+  pendingAct=null;
   if(el.name==='type'){d.type=el.value;d.daysManual=false}
   else if(el.name==='form')d.form=el.value;
   else if(el.dataset.plan!=null)d.plans[+el.dataset.plan]=el.value;
@@ -358,8 +362,35 @@ function fitText(root){
     if(s<parseFloat(el.dataset.base)*.75)shrunk.add(el.textContent)});
 }
 
+/* 오타·맞춤법 점검 (자주 틀리는 표현 위주, 확인 권장으로 표시) */
+const SPELL=[[/되요/g,'돼요'],[/됬/g,'됐'],[/되서/g,'돼서'],[/몇\s?일/g,'며칠'],[/몇칠/g,'며칠'],[/왠만/g,'웬만'],[/왠일/g,'웬일'],[/웬지/g,'왠지'],[/금새/g,'금세'],[/([할갈볼줄]|드릴)께/g,'$1게'],
+ [/일일히/g,'일일이'],[/깨끗히/g,'깨끗이'],[/틈틈히/g,'틈틈이'],[/오랫만/g,'오랜만'],[/희안/g,'희한'],[/뵈요/g,'봬요'],[/어떻해/g,'어떡해'],[/역활/g,'역할'],[/설겆이/g,'설거지'],[/어의없/g,'어이없'],
+ [/않\s?(하|되|돼|가|와|보|먹|해)/g,'안 $1'],[/거에요/g,'거예요'],[/이였/g,'이었'],[/바꼈/g,'바뀌었'],[/설레임/g,'설렘'],[/구지/g,'굳이'],[/요세/g,'요새'],[/담궜/g,'담갔'],[/들렸다/g,'들렀다(방문한 뜻이면)'],
+ [/채험/g,'체험'],[/체험학슴/g,'체험학습'],[/박물간/g,'박물관'],[/견햑/g,'견학'],[/문안하/g,'무난하'],[/어떻게던/g,'어떻게든'],[/할려고/g,'하려고'],[/갈려고/g,'가려고'],[/볼려고/g,'보려고']];
+function typos(v){
+  const out=[],t=String(v||'');if(!t.trim())return out;
+  SPELL.forEach(([re,fix])=>{re.lastIndex=0;let m;while((m=re.exec(t))){out.push(`"${m[0]}" → "${m[0].replace(new RegExp(re.source),fix)}"`)}});
+  if(/[ㄱ-ㅎㅏ-ㅣ]/.test(t))out.push(`낱자모(${t.match(/[ㄱ-ㅎㅏ-ㅣ]+/)[0]})가 들어가 있어요`);
+  const rw=t.match(/(^|\s)([가-힣A-Za-z]{2,})\s+\2(?=[\s.,!?]|$)/);if(rw)out.push(`같은 말이 두 번 이어져요("${rw[2]} ${rw[2]}")`);
+  if(/ {2,}/.test(t))out.push('띄어쓰기가 두 칸 이상인 곳이 있어요');
+  if(/,,|(^|[^.])\.\.(?!\.)|!!|\?\?/.test(t))out.push('문장부호가 겹쳐 있어요(,, 또는 ..)');
+  if(/\s[.,!?]/.test(t))out.push('문장부호 앞에 띄어쓰기가 있어요');
+  if(/[,](?=[가-힣A-Za-z])/.test(t))out.push('쉼표 뒤에 띄어쓰기가 빠졌어요');
+  if((t.match(/\(/g)||[]).length!==(t.match(/\)/g)||[]).length)out.push('괄호 ( ) 짝이 맞지 않아요');
+  return out;
+}
+function typoCheck(W){
+  const F=tab==='app'?[['dest','목적지'],['lodge','숙박장소'],['purpose','목적']]:[['dest','목적지'],['comp','보호자(동반자)'],['title','제목']];
+  F.forEach(([k,l])=>typos(d[k]).forEach(m=>W(`[오타] ${l}: ${m}`,`[data-k=${k}]`)));
+  const days=rows();
+  for(let i=0;i<nRows();i++){
+    const v=tab==='app'?d.plans[i]:d.reps[i],sel=tab==='app'?`[data-plan="${i}"]`:`[data-rep="${i}"]`,l=`${i+1}일차${days[i]?`(${md(days[i])})`:''}`;
+    typos(v).forEach(m=>W(`[오타] ${l}: ${m}`,sel));
+    if(tab==='rep'&&(v||'').trim()&&!/[.!?。]$/.test(v.trim()))W(`[오타] ${l}: 마지막 문장이 마침표로 끝나지 않아요`,sel);
+  }
+}
 /* 검토 */
-let reviewed=false,pending='';
+let reviewed=false;
 const TEL=/^01[016789]-\d{3,4}-\d{4}$/;
 const wdBetween=(a,b)=>{let c=0;for(let x=a;x<b;x=addD(x,1))if(x.getDay()%6)c++;return c};
 function check(){
@@ -425,6 +456,7 @@ function check(){
     if(!sig.repP)E('보호자 서명을 해 주세요','[data-sig=repP] canvas');
     if(!sig.repS)E('학생 서명을 해 주세요','[data-sig=repS] canvas');
   }
+  typoCheck(W);
   shrunk.forEach(t=>W(`칸에 비해 글이 길어 글자가 많이 작아졌어요: "${t.length>18?t.slice(0,18)+'…':t}"`,'#pv'));
   return R;
 }
@@ -433,17 +465,23 @@ function showReview(){
   $$('.bad').forEach(x=>x.classList.remove('bad'));
   R.forEach(r=>{if(r.lv==='e'){const el=document.querySelector(r.f);el&&el.classList.add('bad')}});
   const box=$('#issues');box.className=ne?'':nw?'warn':'ok';
-  box.innerHTML=!R.length?'<b>검토 완료: 오류가 없습니다.</b> 저장하거나 인쇄해도 됩니다.'
-    :`<b>검토 결과: 오류 ${ne}건, 확인 권장 ${nw}건</b><ul>${R.map((r,i)=>`<li class="${r.lv}"><button type="button" data-go="${i}">${r.lv==='e'?'오류':'확인'}</button> ${esc(r.m)}</li>`).join('')}</ul>`;
-  box._R=R;return ne;
+  box.innerHTML=!R.length?'<b>점검 완료: 오류·오타·빈칸이 없습니다.</b>'
+    :`<b>점검 결과: 오류 ${ne}건, 확인 권장 ${nw}건</b> <small>(항목을 누르면 해당 칸으로 이동)</small><ul>${R.map((r,i)=>`<li class="${r.lv}"><button type="button" data-go="${i}">${r.lv==='e'?'오류':'확인'}</button> ${esc(r.m)}</li>`).join('')}</ul>`;
+  box._R=R;return {ne,nw};
 }
-$('#issues').addEventListener('click',e=>{const i=e.target.dataset?.go;if(i==null)return;const r=$('#issues')._R[+i],el=document.querySelector(r.f);if(!el)return;el.scrollIntoView({behavior:'smooth',block:'center'});if(el.focus)setTimeout(()=>el.focus({preventScroll:true}),300)});
-$('#bCheck').onclick=()=>{reviewed=true;pending='';const ne=showReview();say(ne?'오류 항목을 눌러 해당 칸으로 이동해 고쳐 주세요.':'');if(innerWidth<=900)$('#issues').scrollIntoView({behavior:'smooth',block:'start'})};
-function gate(id){ // 출력 전 자동 검토. 오류가 있으면 첫 클릭은 막고, 같은 버튼을 한 번 더 누르면 진행
-  reviewed=true;const ne=showReview();
-  if(!ne||pending===id){pending='';return true}
-  pending=id;say(`오류 ${ne}건이 있습니다. 고친 뒤 다시 누르거나, 그래도 진행하려면 같은 버튼을 한 번 더 누르세요.`);
-  $('#issues').scrollIntoView({behavior:'smooth',block:'nearest'});return false;
+$('#issues').addEventListener('click',e=>{
+  if(e.target.id==='goAnyway'){const a=pendingAct;pendingAct=null;if(a)a();return}
+  if(e.target.id==='goFix'){const r=$('#issues')._R[0],el=r&&document.querySelector(r.f);if(el){el.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>el.focus&&el.focus({preventScroll:true}),300)}return}
+  const i=e.target.dataset?.go;if(i==null)return;const r=$('#issues')._R[+i],el=document.querySelector(r.f);if(!el)return;el.scrollIntoView({behavior:'smooth',block:'center'});if(el.focus)setTimeout(()=>el.focus({preventScroll:true}),300)});
+let pendingAct=null;
+const ACTNAME={pdf:'저장',share:'공유',print:'인쇄'};
+function run(id,act){ // 오류·오타·빈칸 점검 → 문제 없으면 바로 실행, 있으면 목록과 함께 선택지 표시
+  reviewed=true;const {ne,nw}=showReview();
+  if(!ne&&!nw){act();return}
+  pendingAct=act;const box=$('#issues');
+  box.insertAdjacentHTML('beforeend',`<div class="act"><button type="button" class="go" id="goFix">첫 항목 고치러 가기</button><button type="button" id="goAnyway">${ne?`오류가 있지만 그대로 ${ACTNAME[id]}`:`확인했어요, 이대로 ${ACTNAME[id]}`}</button></div>`);
+  say(ne?`오류 ${ne}건을 고친 뒤 다시 눌러 주세요.`:`확인 권장 ${nw}건이 있어요. 살펴본 뒤 진행하세요.`);
+  box.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
 /* 렌더 */
@@ -458,7 +496,7 @@ function fit(){
 }
 const pvRO=new ResizeObserver(fit);pvRO.observe($('#pv'));
 
-function setTab(t){tab=t;reviewed=false;pending='';$('#issues').innerHTML='';$$('.bad').forEach(x=>x.classList.remove('bad'));$('#tApp').classList.toggle('on',t==='app');$('#tRep').classList.toggle('on',t==='rep');
+function setTab(t){tab=t;reviewed=false;pendingAct=null;$('#issues').innerHTML='';$$('.bad').forEach(x=>x.classList.remove('bad'));$('#tApp').classList.toggle('on',t==='app');$('#tRep').classList.toggle('on',t==='rep');
   $$('.app').forEach(x=>x.hidden=t!=='app');$$('.rep').forEach(x=>x.hidden=t!=='rep');$('#n4').textContent=t==='app'?4:3;$('#n5').textContent=t==='app'?5:4;
   $$('.rep h2 b')[0].textContent=5;$$('.rep h2 b')[1].textContent=6;render()}
 $('#tApp').onclick=()=>setTab('app');$('#tRep').onclick=()=>setTab('rep');
@@ -480,13 +518,16 @@ async function makePdf(){
   cap.innerHTML='';return pdf.output('blob');
 }
 function dl(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
-$('#bPdf').onclick=async()=>{if(!gate('pdf'))return;say('PDF 만드는 중…');try{dl(await makePdf(),fname()+'.pdf');say('PDF를 저장했습니다.')}catch(e){say('PDF를 만들지 못했습니다. [인쇄] → "PDF로 저장"을 이용하세요.')}};
-$('#bShare').onclick=async()=>{if(!gate('share'))return;say('PDF 만드는 중…');try{
+const doPdf=async()=>{say('PDF 만드는 중…');try{dl(await makePdf(),fname()+'.pdf');say('PDF를 저장했습니다.')}catch(e){say('PDF를 만들지 못했습니다. [점검 후 인쇄] → "PDF로 저장"을 이용하세요.')}};
+const doShare=async()=>{say('PDF 만드는 중…');try{
   const f=new File([await makePdf()],fname()+'.pdf',{type:'application/pdf'});
   if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:fname()});say('공유 창에서 받는 사람을 골라 직접 보내 주세요.')}
   else{dl(f,f.name);say('이 기기는 파일 공유를 지원하지 않아 PDF를 내려받았습니다. 카카오톡·메일에 파일로 첨부해 주세요.')}
 }catch(e){if(e.name==='AbortError')say('공유를 취소했습니다.');else say('공유하지 못했습니다. PDF 저장 후 직접 첨부해 주세요.')}};
-$('#bPrint').onclick=()=>{if(!gate('print'))return;$$('#pv .page').forEach(p=>p.style.transform='none');window.print();fit()};
+const doPrint=()=>{$$('#pv .page').forEach(p=>p.style.transform='none');window.print();fit()};
+$('#bDone').onclick=()=>run('pdf',doPdf);
+$('#bShare').onclick=()=>run('share',doShare);
+$('#bPrint').onclick=()=>run('print',doPrint);
 $('#foot').innerHTML=`서명·사진은 이 브라우저 안에서만 쓰이며 어디에도 전송되지 않습니다. 글 입력 내용은 이 기기에만 임시 저장됩니다.${CONFIG.teacherMail?`<br>담임 메일: ${esc(CONFIG.teacherMail)} · 공유는 자동 전송이 아니므로 받는 사람을 직접 확인하고 보내세요.`:''}`;
 
 fill();modeUI();autoDays();buildDays();setTab('app');
