@@ -65,7 +65,11 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .photo{display:flex;gap:8px;align-items:center;margin-top:6px}
 .photo img{width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--line)}
 .photo input{font-size:13px;min-height:0;padding:6px}
-#side{align-self:start;position:sticky;top:12px;max-height:calc(100vh - 24px);overflow-y:auto;overscroll-behavior:contain;padding-right:2px}
+#side{align-self:start;position:sticky;top:12px}
+#side #pv{height:100%;display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box}
+#pv .shell:not(:first-child){display:none}
+#pv .shell{margin:0}
+#issues{margin-top:10px}
 .bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
 #issues{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:14px;max-height:320px;overflow:auto}
 #issues.warn{border-left-color:#d99a1e}#issues.ok{border-left-color:#2e8b57}
@@ -135,7 +139,8 @@ input[readonly]{background:light-dark(#f0f3f1,#1a201d);color:var(--mute)}
 #mustNote{margin:0 0 10px;padding:10px 12px;border-radius:10px;background:light-dark(#fff4e8,#3a2a19);font-size:14px}
 #mustNote[hidden]{display:none}
 #revMsg{font-size:14px;margin-top:8px;font-weight:500}
-#rev{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:12px}
+#actRow{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}#actRow .btn{flex:1 1 180px}#actRow #bReq,#actRow #bDone{flex:2 1 220px;font-size:16px}
+#rev{margin-top:8px}
 #rev h3{margin:0 0 6px;font-size:16px}
 #rev .pinrow{display:flex;gap:8px;align-items:end;flex-wrap:wrap}
 #rev .pinrow label{flex:0 1 200px}
@@ -163,7 +168,7 @@ input[readonly]{background:light-dark(#f0f3f1,#1a201d);color:var(--mute)}
 .page .ov{position:absolute;white-space:pre;overflow:visible;color:#000;margin:0;padding:0}
 .page .cv{position:absolute;background:#fff}
 #cap{position:fixed;left:-10000px;top:0}
-@media(max-width:900px){main{grid-template-columns:minmax(0,1fr)}#side{position:static;max-height:none;overflow:visible}}
+@media(max-width:900px){main{grid-template-columns:minmax(0,1fr)}#side{position:static;height:auto}#side #pv{height:auto}}
 @media print{
   @page{size:595pt 841pt;margin:0}
   body{background:#fff}
@@ -284,22 +289,18 @@ input[readonly]{background:light-dark(#f0f3f1,#1a201d);color:var(--mute)}
     <label>작성일<input type="date" data-k="repDate"></label>
     <div data-sig="repP"></div><div data-sig="repS"></div>
   </section>
-  <button class="btn" id="reset" type="button">입력 내용 모두 지우기</button>
-</div>
-<div id="side">
-  <div class="bar" id="localBar"><button class="btn p" id="bDone">점검 후 이미지 저장</button></div>
+  <div id="actRow">
+    <button class="btn" id="reset" type="button">입력 내용 모두 지우기</button>
+    <button class="btn p" id="bReq" type="button" hidden>담임 선생님께 검토 요청</button>
+    <button class="btn p" id="bDone" type="button">점검 후 이미지 저장</button>
+  </div>
+  <div id="rev" hidden><div id="curInfo" class="hint" style="margin:0"></div><input id="pin" type="hidden"></div>
+  <div id="revMsg"></div>
   <div id="msg"></div>
   <div id="issues"></div>
-  <section id="rev" hidden>
-    <h3>담임 선생님 검토</h3>
-    <p class="hint" style="margin:0 0 8px">다 썼으면 <b>점검 후 검토 요청</b>을 누르세요. 보낸 서류는 <b>📁 내 보관함</b>에 모이고, 담임 선생님이 승인하면 보관함에서 <b>이미지로 저장</b>해 나이스에 첨부해요. 쓰다가 보관함으로 가면 작성 중으로 자동 저장돼요.</p>
-    <div id="curInfo" class="hint" style="margin:0 0 6px"></div>
-    <input id="pin" type="hidden">
-    <div class="bar" style="margin:10px 0 0"><button class="btn p" id="bReq" type="button">점검 후 검토 요청</button></div>
-    <div id="revMsg"></div>
-  </section>
+</div>
+<div id="side">
   <div id="pv"></div>
-  <p class="foot" id="foot"></p>
 </div>
 </main>
 <div id="cap"></div>
@@ -652,7 +653,7 @@ function run(id,act){ // 오류·오타·빈칸 점검 → 문제 없으면 바�
   reviewed=true;const {ne,nw}=showReview();
   if(!ne&&!nw){act();return}
   const R=$('#issues')._R;
-  const list=`<ul>${R.slice(0,12).map(r=>`<li class="${r.lv}"><b>${r.lv==='e'?'오류':'확인'}</b><span>${esc(r.m)}</span></li>`).join('')}${R.length>12?`<li>…외 ${R.length-12}건 (오른쪽 점검 결과 목록 참고)</li>`:''}</ul>`;
+  const list=`<ul>${R.slice(0,12).map(r=>`<li class="${r.lv}"><b>${r.lv==='e'?'오류':'확인'}</b><span>${esc(r.m)}</span></li>`).join('')}${R.length>12?`<li>…외 ${R.length-12}건 (버튼 아래 점검 결과 목록 참고)</li>`:''}</ul>`;
   modal(`<h3>${ne?'⚠️ 빠지거나 틀린 곳이 있어요':'확인해 주세요'}</h3><p style="margin:0;color:var(--mute);font-size:14px">${ne?`오류 ${ne}건`:''}${ne&&nw?', ':''}${nw?`확인 권장 ${nw}건`:''}</p>${list}`,
     ne?[{label:'고치러 가기',p:true,fn:goFirst},{label:`그래도 ${ACTNAME[id]}`,fn:act}]
       :[{label:`이대로 ${ACTNAME[id]}`,p:true,fn:act},{label:'고치러 가기',fn:goFirst}]);
@@ -668,10 +669,12 @@ function render(){
   $('#mustNote').innerHTML=mi.length?`<b>필수 출석일이 포함되어 있어요</b><br>${mi.map(x=>`${md(x)}(${WD[x.getDay()]}) ${esc(MUST[key(x)])}`).join('<br>')}<br><span style="color:var(--mute)">부득이한 경우 그대로 신청·저장할 수 있어요. 담임 선생님과 미리 상의하세요.</span>`:'';
 }
 function fit(){
-  const W=$('#pv').clientWidth-28,s=Math.min(1,W/793.33);
+  const pv=$('#pv'),dk=innerWidth>900,side=$('#side');
+  side.style.height=dk?Math.max(420,innerHeight-($('main').getBoundingClientRect().top+scrollY)-16)+'px':'';
+  const W=pv.clientWidth-24,H=dk?pv.clientHeight-24:1e9,s=Math.max(.1,Math.min(1,W/793.33,H/1121.33));
   $$('#pv .shell').forEach(sh=>{const pg=sh.firstElementChild;pg.style.transform=`scale(${s})`;sh.style.width=793.33*s+'px';sh.style.height=1121.33*s+'px'});
 }
-const pvRO=new ResizeObserver(fit);pvRO.observe($('#pv'));
+const pvRO=new ResizeObserver(fit);pvRO.observe($('#pv'));addEventListener('resize',fit);
 
 function setTab(t){tab=t;reviewed=false;pendingAct=null;$('#issues').innerHTML='';$$('.bad').forEach(x=>x.classList.remove('bad'));$('#tApp').classList.toggle('on',t==='app');$('#tRep').classList.toggle('on',t==='rep');
   $$('.app').forEach(x=>x.hidden=t!=='app');$$('.rep').forEach(x=>x.hidden=t!=='rep');$('#n4').textContent=t==='app'?4:3;$('#n5').textContent=t==='app'?5:4;
@@ -829,7 +832,7 @@ const doReq=async()=>{
   finally{$('#bReq').disabled=false}
 };
 if(API){
-  $('#rev').hidden=false;$('#localBar').hidden=true;
+  $('#rev').hidden=false;$('#bReq').hidden=false;$('#bDone').hidden=true;
   $('#pin').addEventListener('input',e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,4);e.target.classList.remove('bad')});
   $('#bReq').onclick=()=>{if(!pinOk())return;run('req',doReq)};
   $('#bNew').onclick=newApp;
@@ -839,7 +842,6 @@ if(API){
   $('#bLocker').onclick=async()=>{if(!$('#mainApp').hidden&&dirty)await saveDraft(true);showLocker()};
   document.addEventListener('input',e=>{if(e.target.closest&&e.target.closest('#form'))dirty=true});
 }
-$('#foot').innerHTML=`서명·사진은 이 브라우저 안에서만 쓰이며 어디에도 전송되지 않습니다. 글 입력 내용은 이 기기에만 임시 저장됩니다.<br>공유는 자동 전송이 아니므로 받는 사람(담임 선생님)을 직접 확인하고 보내세요.${API?' 검토 요청을 보내면 신청서 PDF가 학교 구글 드라이브에 저장되어 담임 선생님이 확인합니다.':''}<br><a href="teacher.html">담임용 검토 화면</a>`;
 
 /* ── 로그인 대문 ── */
 const IDK=['grade','cls','num','name','phone'];
