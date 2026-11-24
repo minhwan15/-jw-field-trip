@@ -286,7 +286,7 @@ $('#filters').addEventListener('click',e=>{const f=e.target.closest('[data-f]');
 $('#list').addEventListener('click',e=>{const b=e.target.closest('[data-id]');if(b)open(b.dataset.id)});
 $('#bRefresh').onclick=load;
 $('#back').onclick=()=>{$('#app').classList.remove('showd');window.scrollTo(0,0)};
-$('#bLogout').onclick=()=>{try{sessionStorage.removeItem('jw-t')}catch(e){}location.reload()};
+$('#bLogout').onclick=()=>{try{sessionStorage.removeItem('jw-t')}catch(e){}location.href='./'};
 async function login(c){
   $('#lmsg').textContent='확인하는 중…';$('#lmsg').className='';
   try{const j=await api({action:'tlist',...c});cred=c;try{sessionStorage.setItem('jw-t',JSON.stringify(c))}catch(e){}

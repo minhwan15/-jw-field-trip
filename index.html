@@ -29,7 +29,7 @@
 *{box-sizing:border-box;min-width:0}
 [hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 'Noto Sans KR',system-ui,sans-serif;overflow-x:clip}
-header{background:var(--g);color:#fff;padding:18px max(4vw,16px) 0}
+header{background:var(--g);color:#fff;padding:18px max(4vw,16px) 0;display:flow-root}
 header h1{margin:0;font-size:clamp(22px,3vw,30px);line-height:1.15}
 header p{margin:4px 0 14px;opacity:.85;font-size:14px}
 .htop{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
@@ -100,6 +100,21 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 #terms label:has(input:checked){background:var(--g2);border-color:var(--g);box-shadow:0 0 0 1px var(--g)}
 #terms label.free{justify-content:center}
 .pinwarn{color:#d9731e;font-weight:700}
+#gate{padding:28px max(4vw,16px) 60px;max-width:1100px;margin:auto}
+.gwrap{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:20px;align-items:start}
+.gcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px}
+.gcard.t{background:light-dark(#f6f8f7,#1a201d)}
+.gcard h2{margin:0 0 6px;font-size:22px}
+.gsub{margin:0 0 14px;font-size:14px;color:var(--mute)}
+.ggrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.ggrid .w2{grid-column:span 2}.ggrid .w3{grid-column:span 3}
+.gbtn{width:100%;margin-top:14px;min-height:50px;font-size:16px}
+.gmsg{min-height:1.3em;margin:8px 0 0;font-size:14px;color:#e2553f}
+.gfoot{font-size:13px;color:var(--mute);margin-top:16px;text-align:center}
+#who{display:flex;align-items:center;gap:10px;color:#fff;font-weight:500}
+#who .tbtn{min-height:38px;padding:6px 14px;font-size:14px}
+input[readonly]{background:light-dark(#f0f3f1,#1a201d);color:var(--mute)}
+@media(max-width:800px){.gwrap{grid-template-columns:minmax(0,1fr)}}
 .idgrid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
 .idgrid label{grid-column:span 2}
 .idgrid label.w2{grid-column:span 2}
@@ -150,11 +165,41 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 </head>
 <body>
 <header>
-  <div class="htop"><h1>정왕고 체험학습 작성기</h1><a class="tbtn" href="teacher.html" id="tLink" hidden>👩‍🏫 담임 검토 화면</a></div>
+  <div class="htop"><h1>정왕고 체험학습 작성기</h1><div id="who" hidden><span id="whoName"></span><button class="tbtn" id="bLogout" type="button">로그아웃</button></div></div>
   <p>입력하면 학교 양식(서식 1·2)에 그대로 채워집니다. 작성·출력이 곧 허가는 아니며, 담임교사의 최종 허가 통보를 받은 뒤 실시하세요.</p>
-  <nav class="tabs"><button id="tApp" class="on">서식 1 · 신청서</button><button id="tRep">서식 2 · 결과보고서</button></nav>
+  <nav class="tabs" id="tabs" hidden><button id="tApp" class="on">서식 1 · 신청서</button><button id="tRep">서식 2 · 결과보고서</button></nav>
 </header>
-<main>
+<section id="gate" hidden>
+  <div class="gwrap">
+    <form class="gcard" id="gStu" autocomplete="off">
+      <h2>🎒 학생 로그인</h2>
+      <p class="gsub">처음이면 지금 정한 <b>비밀번호(숫자 4자리)</b>가 내 비밀번호가 돼요. 다음에 이어 쓰거나 다른 기기에서 불러올 때 필요하니 꼭 기억하세요.</p>
+      <div class="ggrid">
+        <label>학년<select id="sg"><option>1</option><option>2</option><option selected>3</option></select></label>
+        <label>반<input id="sc" inputmode="numeric" maxlength="2" placeholder="8"></label>
+        <label>번호<input id="sn" inputmode="numeric" maxlength="2" placeholder="12"></label>
+        <label class="w3">성명<input id="sname" autocomplete="off" placeholder="홍길동"></label>
+        <label class="w3">휴대폰<input id="sphone" class="tel" inputmode="tel" placeholder="010-0000-0000"></label>
+        <label class="w3">비밀번호 (숫자 4자리)<input id="spin" type="password" inputmode="numeric" maxlength="4" placeholder="••••"></label>
+      </div>
+      <button class="btn p gbtn" type="submit">로그인하고 작성 시작</button>
+      <p class="gmsg" id="gStuMsg"></p>
+    </form>
+    <form class="gcard t" id="gTch" autocomplete="off">
+      <h2>👩‍🏫 교사용 로그인</h2>
+      <p class="gsub">담임 선생님은 반별 비밀번호로 학생들의 검토 요청을 확인·승인합니다.</p>
+      <div class="ggrid">
+        <label>학년<select id="tg"><option>1</option><option>2</option><option selected>3</option></select></label>
+        <label class="w2">반<input id="tc" inputmode="numeric" maxlength="2" placeholder="8"></label>
+        <label class="w3">담임 비밀번호<input id="tpw" type="password" autocomplete="current-password"></label>
+      </div>
+      <button class="btn gbtn" type="submit">교사용 검토 화면으로</button>
+      <p class="gmsg" id="gTchMsg"></p>
+    </form>
+  </div>
+  <p class="gfoot">작성·출력이 곧 허가는 아니며, 담임교사의 최종 허가 통보를 받은 뒤 실시하세요. 서명·사진은 이 기기 안에서만 쓰여요.</p>
+</section>
+<main id="mainApp" hidden>
 <div id="form">
   <section>
     <h2><b>1</b>학생 정보</h2>
@@ -228,17 +273,9 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
   <div id="issues"></div>
   <section id="rev" hidden>
     <h3>담임 선생님 검토 · 내 신청</h3>
-    <p class="hint" style="margin:0 0 8px">검토 요청을 보내거나, 보낸 신청을 다른 기기에서 다시 불러올 때 아래 정보를 입력하세요.</p>
-    <div class="idgrid">
-      <label>학년<select data-k="grade"><option>1</option><option>2</option><option selected>3</option></select></label>
-      <label>반<input data-k="cls" inputmode="numeric"></label>
-      <label>번호<input data-k="num" inputmode="numeric"></label>
-      <label class="w2">성명<input data-k="name" autocomplete="name"></label>
-      <label class="w2">휴대폰<input data-k="phone" class="tel" inputmode="tel" placeholder="010-0000-0000"></label>
-      <label class="w2">검토 비밀번호 (숫자 4자리) <span class="pinwarn">· 꼭 기억!</span><input id="pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="예: 1234"></label>
-    </div>
-    <div class="bar" style="margin:10px 0 0"><button class="btn p" id="bReq" type="button">점검 후 검토 요청</button><button class="btn" id="bStat" type="button">내 신청 불러오기</button></div>
-    <p class="hint" style="margin:6px 0 0">처음 검토 요청할 때 정한 비밀번호로 다음에 내 신청을 불러오고 다시 보내요. 잊으면 담임 선생님께 말씀하세요.</p>
+    <p class="hint" style="margin:0 0 8px">다 썼으면 <b>점검 후 검토 요청</b>을 누르세요. 담임 선생님이 확인하면 아래에 결과가 표시돼요.</p>
+    <input id="pin" type="hidden">
+    <div class="bar" style="margin:10px 0 0"><button class="btn p" id="bReq" type="button">점검 후 검토 요청</button><button class="btn" id="bStat" type="button">내 신청 새로고침</button></div>
     <div id="revMsg"></div>
     <div id="revList"></div>
   </section>
@@ -670,7 +707,7 @@ async function api(o){
 }
 const blob64=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]);r.onerror=rej;r.readAsDataURL(b)});
 const who=()=>({grade:d.grade,cls:d.cls,num:d.num,name:(d.name||'').replace(/\s+/g,''),phone:d.phone||'',pin:$('#pin').value.trim()});
-function pinOk(){const v=$('#pin').value.trim();if(/^\d{4}$/.test(v)){try{localStorage.setItem('jw-pin',v)}catch(e){}return true}
+function pinOk(){const v=$('#pin').value.trim();if(/^\d{4}$/.test(v))return true;
   $('#pin').classList.add('bad');$('#pin').focus();say('검토 비밀번호 숫자 4자리를 입력하세요.');return false}
 function showList(list){
   const cls=s=>s==='승인'?'ok':s==='보완 요청'?'fix':'';
@@ -708,8 +745,7 @@ const doReq=async()=>{
   finally{$('#bReq').disabled=false}
 };
 if(API){
-  $('#rev').hidden=false;$('#tLink').hidden=false;
-  try{$('#pin').value=localStorage.getItem('jw-pin')||''}catch(e){}
+  $('#rev').hidden=false;
   $('#pin').addEventListener('input',e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,4);e.target.classList.remove('bad')});
   $('#bReq').onclick=()=>{if(!pinOk())return;run('req',doReq)};
   $('#bStat').onclick=()=>loadStatus(false);
@@ -721,18 +757,60 @@ if(API){
         const j=await api({action:'mine',...who(),id});const src={...j.data};delete src._sig;delete src._ph;
         const keep={grade:d.grade,cls:d.cls,num:d.num,name:d.name,phone:d.phone};
         Object.keys(d).forEach(k=>delete d[k]);Object.assign(d,{plans:[],reps:[]},src,keep);
-        save();fill();modeUI();buildDays();drawTerms();setTab(j.item.doc==='결과보고서'?'rep':'app');
+        save();fill();lockId(true);modeUI();buildDays();drawTerms();setTab(j.item.doc==='결과보고서'?'rep':'app');
         $('#revMsg').textContent=`✅ ${j.item.doc}(${j.item.period}) 내용을 불러왔어요. 서명·사진은 다시 해 주세요.`;$('#revMsg').style.color='#2e8b57';
         window.scrollTo({top:0,behavior:'smooth'});
       }catch(err){$('#revMsg').textContent='❌ '+err.message;$('#revMsg').style.color='#e2553f'}
     };
     modal('<h3>이 신청 내용을 불러올까요?</h3><p>지금 작성칸에 있는 내용이 보낸 신청 내용으로 바뀌어요. 서명·사진은 저장되지 않아서 다시 해야 해요.</p>',[{label:'불러오기',p:true,fn:go},{label:'취소'}]);
   });
-  if($('#pin').value&&d.name&&d.num&&d.phone)loadStatus(true);
 }
 $('#foot').innerHTML=`서명·사진은 이 브라우저 안에서만 쓰이며 어디에도 전송되지 않습니다. 글 입력 내용은 이 기기에만 임시 저장됩니다.<br>공유는 자동 전송이 아니므로 받는 사람(담임 선생님)을 직접 확인하고 보내세요.${API?' 검토 요청을 보내면 신청서 PDF가 학교 구글 드라이브에 저장되어 담임 선생님이 확인합니다.':''}<br><a href="teacher.html">담임용 검토 화면</a>`;
 
-fill();modeUI();autoDays();buildDays();drawTerms();setTab('app');
+/* ── 로그인 대문 ── */
+const IDK=['grade','cls','num','name','phone'];
+const num2=v=>String(v||'').replace(/\D/g,'').replace(/^0+(?=\d)/,'');
+function lockId(on){IDK.forEach(k=>$$(`[data-k=${k}]`).forEach(el=>{if(el.tagName==='SELECT')el.disabled=on;else el.readOnly=on}))}
+function enter(sv){
+  const same=d.name===sv.name&&String(d.cls)===sv.cls&&String(d.num)===sv.num&&String(d.grade)===sv.grade;
+  if(d.name&&!same){Object.keys(d).forEach(k=>delete d[k]);Object.assign(d,{type:'day',ampm:'am',purpose:DEF_PURPOSE,form:'',plans:[],reps:[],appDate:today(),repDate:today(),daysManual:false,c1:true,safe:true})}
+  Object.assign(d,{grade:sv.grade,cls:sv.cls,num:sv.num,name:sv.name,phone:sv.phone});save();
+  $('#pin').value=sv.pin;$('#gate').hidden=true;$('#mainApp').hidden=false;$('#tabs').hidden=false;$('#who').hidden=false;
+  $('#whoName').textContent=`${sv.grade}-${sv.cls} ${sv.num}번 ${sv.name}`;
+  fill();lockId(true);modeUI();autoDays();buildDays();drawTerms();setTab('app');
+  if(API)loadStatus(true);
+}
+let SES=null;try{SES=JSON.parse(sessionStorage.getItem('jw-s')||'null')}catch(e){}
+$('#sc').addEventListener('input',e=>e.target.value=e.target.value.replace(/\D/g,''));
+$('#sn').addEventListener('input',e=>e.target.value=e.target.value.replace(/\D/g,''));
+$('#spin').addEventListener('input',e=>e.target.value=e.target.value.replace(/\D/g,'').slice(0,4));
+$('#sphone').addEventListener('input',e=>e.target.value=telFmt(e.target.value));
+$('#gStu').onsubmit=async e=>{
+  e.preventDefault();const m=$('#gStuMsg');m.textContent='';
+  const sv={grade:$('#sg').value,cls:num2($('#sc').value),num:num2($('#sn').value),name:$('#sname').value.replace(/\s+/g,''),phone:telFmt($('#sphone').value),pin:$('#spin').value};
+  if(!sv.cls||!sv.num)return m.textContent='반과 번호를 입력하세요.';
+  if(!/^[가-힣a-zA-Z]{2,}$/.test(sv.name))return m.textContent='성명을 확인하세요.';
+  if(!/^01[016789]-\d{3,4}-\d{4}$/.test(sv.phone))return m.textContent='휴대폰 번호를 확인하세요.';
+  if(!/^\d{4}$/.test(sv.pin))return m.textContent='비밀번호는 숫자 4자리예요.';
+  if(API){m.style.color='var(--mute)';m.textContent='확인하는 중…';
+    try{await api({action:'status',grade:sv.grade,cls:sv.cls,num:sv.num,name:sv.name,phone:sv.phone,pin:sv.pin})}
+    catch(err){m.style.color='';m.textContent=err.message+(/다릅니다/.test(err.message)?' (처음 검토 요청 때 정한 비밀번호를 입력하세요)':'');return}
+    m.style.color='';m.textContent='';}
+  try{sessionStorage.setItem('jw-s',JSON.stringify(sv))}catch(err){}
+  enter(sv);
+};
+$('#gTch').onsubmit=async e=>{
+  e.preventDefault();const m=$('#gTchMsg');m.textContent='';
+  const c={grade:$('#tg').value,cls:num2($('#tc').value),tpw:$('#tpw').value};
+  if(!c.cls||!c.tpw)return m.textContent='반과 비밀번호를 입력하세요.';
+  if(!API)return m.textContent='검토 서버가 아직 연결되지 않았어요.';
+  m.style.color='var(--mute)';m.textContent='확인하는 중…';
+  try{await api({action:'tlist',...c});sessionStorage.setItem('jw-t',JSON.stringify(c));location.href='teacher.html'}
+  catch(err){m.style.color='';m.textContent=err.message}
+};
+$('#bLogout').onclick=()=>modal('<h3>로그아웃할까요?</h3><p>이 기기에 임시 저장된 작성 내용도 함께 지워요. 검토 요청을 보낸 신청은 다음에 로그인해서 다시 불러올 수 있어요.</p>',
+  [{label:'로그아웃',p:true,fn:()=>{try{sessionStorage.removeItem('jw-s');localStorage.removeItem(KEY)}catch(e){}location.reload()}},{label:'취소'}]);
+if(SES)enter(SES);else{$('#gate').hidden=false;if(d.name){$('#sname').value=d.name;$('#sc').value=d.cls||'';$('#sn').value=d.num||'';$('#sphone').value=d.phone||'';$('#sg').value=d.grade||'3'}}
 }
 </script>
 </body>
