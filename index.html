@@ -65,7 +65,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .photo{display:flex;gap:8px;align-items:center;margin-top:6px}
 .photo img{width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--line)}
 .photo input{font-size:13px;min-height:0;padding:6px}
-#side{align-self:start}
+#side{align-self:start;position:sticky;top:12px;max-height:calc(100vh - 24px);overflow-y:auto;overscroll-behavior:contain;padding-right:2px}
 .bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
 #issues{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:14px;max-height:320px;overflow:auto}
 #issues.warn{border-left-color:#d99a1e}#issues.ok{border-left-color:#2e8b57}
@@ -121,7 +121,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 #plans.bad{box-shadow:none}
 #msg{font-size:14px;color:var(--g);min-height:1.2em;margin-bottom:6px}
 :root[data-theme=dark] #msg{color:#8fd1ae}
-#pv{background:light-dark(#dfe5e1,#0c0f0d);border-radius:14px;padding:14px;max-height:85vh;overflow:auto}
+#pv{background:light-dark(#dfe5e1,#0c0f0d);border-radius:14px;padding:14px}
 .shell{margin:0 auto 14px;box-shadow:0 2px 10px rgba(0,0,0,.18);overflow:hidden;background:#fff}
 .shell>.page{transform-origin:0 0}
 .foot{font-size:13px;color:var(--mute);margin-top:10px}
@@ -131,7 +131,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .page .ov{position:absolute;white-space:pre;overflow:visible;color:#000;margin:0;padding:0}
 .page .cv{position:absolute;background:#fff}
 #cap{position:fixed;left:-10000px;top:0}
-@media(max-width:900px){main{grid-template-columns:minmax(0,1fr)}#side{position:static}#pv{max-height:none}}
+@media(max-width:900px){main{grid-template-columns:minmax(0,1fr)}#side{position:static;max-height:none;overflow:visible}}
 @media print{
   @page{size:595pt 841pt;margin:0}
   body{background:#fff}
