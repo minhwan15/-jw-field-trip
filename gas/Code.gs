@@ -190,8 +190,9 @@ function status_(b) {
 function txt_(x) { return x instanceof Date ? Utilities.formatDate(x, 'Asia/Seoul', 'yyyy-MM-dd HH:mm') : String(x == null ? '' : x); }
 function pub_(r) {
   return { id: r[C['ID']], doc: r[C['구분']], grade: r[C['학년']], cls: r[C['반']], num: r[C['번호']], name: r[C['이름']], period: r[C['기간']], dest: r[C['목적지']],
-    status: r[C['상태']], comment: r[C['보완사항']], at: txt_(r[C['요청시각']]), reviewedAt: txt_(r[C['검토시각']]), count: r[C['요청횟수']] };
+    status: r[C['상태']], comment: r[C['보완사항']], at: txt_(r[C['요청시각']]), reviewedAt: txt_(r[C['검토시각']]), count: r[C['요청횟수']], days: days_(r) };
 }
+function days_(r) { try { return String(JSON.parse(String(r[C['데이터']] || '{}')).days || ''); } catch (e) { return ''; } }
 
 /* 담임 인증: 설정 탭의 반별 비밀번호 */
 function teacher_(b) {

@@ -235,6 +235,7 @@ input[readonly]{background:light-dark(#f0f3f1,#1a201d);color:var(--mute)}
       <p class="hint" style="margin:6px 0 0">필수 출석일은 가급적 피하고, 부득이하면 담임 선생님과 미리 상의하세요. 그림을 누르면 크게 볼 수 있습니다.</p>
     </details>
     <div class="row"><label>출석 인정 신청일수<input data-k="days" inputmode="decimal"></label><label>금회까지 누적 사용기간(일)<input data-k="cum" inputmode="decimal"></label></div>
+    <p class="hint" id="cumRef" hidden style="background:#eef6f1;border-radius:8px;padding:8px 10px;color:#2b5d45"></p>
     <p class="hint">신청일수는 주말과 휴일(12/25, 1/1)을 뺀 수업일 수로 자동 계산됩니다. 다른 휴업일이 끼면 직접 고쳐 주세요. 누적은 이번 신청분까지 더한 일수입니다(연간 20일 이내).</p>
   </section>
   <section class="app">
@@ -725,7 +726,7 @@ const BADGE=st=>`<span class="badge ${st==='승인'?'ok':st==='보완 요청'?'f
 const startOf=id=>String(id).slice(-10);
 const md2=s=>{const x=pd(s);return x?`${x.getMonth()+1}/${x.getDate()}(${WD[x.getDay()]})`:''};
 function showView(v){$('#locker').hidden=v!=='locker';$('#mainApp').hidden=v!=='editor';$('#tabs').hidden=v!=='editor';window.scrollTo(0,0)}
-function curInfo(){const id=curId,doc=tab==='app'?'신청서':'결과보고서';$('#curInfo').innerHTML=id&&id.startsWith(tab==='app'?'app-':'rep-')?`지금 쓰는 서류: <b>${doc}</b> · 보관함에 저장됨`:`지금 쓰는 서류: <b>새 ${doc}</b> · 아직 보관함에 없음`}
+function curInfo(){const id=curId,doc=tab==='app'?'신청서':'결과보고서';$('#curInfo').innerHTML=id&&id.startsWith(tab==='app'?'app-':'rep-')?`지금 쓰는 서류: <b>${doc}</b> · 보관함에 저장됨`:`지금 쓰는 서류: <b>새 ${doc}</b> · 아직 보관함에 없음`;cumRef()}
 async function showLocker(){
   showView('locker');$('#lWho').textContent=$('#whoName').textContent;
   if(!API){$('#lList').innerHTML='<p class="lempty">검토 서버가 연결되지 않아 보관함을 쓸 수 없어요.</p>';return}
@@ -755,7 +756,7 @@ async function openItem(id,asRep){
     Object.keys(d).forEach(k=>delete d[k]);Object.assign(d,{plans:[],reps:[]},src,keep);
     if(asRep){if(!d.repDate)d.repDate=today();}
     Object.keys(sig).forEach(k=>sig[k]='');Object.keys(sigRaw).forEach(k=>sigRaw[k]='');photos.length=0;$$('[data-sig] canvas').forEach(c=>c.getContext('2d').clearRect(0,0,c.width,c.height));
-    curId=asRep?null:id;dirty=false;save();showView('editor');fill();lockId(true);modeUI();buildDays();drawTerms();setTab(asRep||id.startsWith('rep-')?'rep':'app');curInfo();$('#lMsg').textContent='';
+    curId=asRep?null:id;dirty=false;save();showView('editor');fill();lockId(true);modeUI();buildDays();drawTerms();setTab(asRep||id.startsWith('rep-')?'rep':'app');curInfo();cumRef();$('#lMsg').textContent='';
     $('#revMsg').textContent=asRep?'신청서의 기본 정보를 옮겨 왔어요. 결과보고서 내용·사진·서명을 채워 주세요.':'불러왔어요. 서명·사진은 다시 해 주세요.';$('#revMsg').style.color='#2e8b57';
   }catch(e){$('#lMsg').textContent='❌ '+e.message}
 }
@@ -781,9 +782,21 @@ function newApp(){
   const keep={grade:d.grade,cls:d.cls,num:d.num,name:d.name,phone:d.phone};
   Object.keys(d).forEach(k=>delete d[k]);Object.assign(d,{type:'day',ampm:'am',purpose:DEF_PURPOSE,form:'',plans:[],reps:[],appDate:today(),repDate:today(),daysManual:false,c1:true,safe:true},keep);
   Object.keys(sig).forEach(k=>sig[k]='');Object.keys(sigRaw).forEach(k=>sigRaw[k]='');photos.length=0;$$('[data-sig] canvas').forEach(c=>c.getContext('2d').clearRect(0,0,c.width,c.height));
-  curId=null;dirty=false;save();showView('editor');fill();lockId(true);modeUI();autoDays();buildDays();drawTerms();setTab('app');curInfo();$('#revMsg').textContent='';
+  curId=null;dirty=false;save();showView('editor');fill();lockId(true);modeUI();autoDays();buildDays();drawTerms();setTab('app');curInfo();cumRef();$('#revMsg').textContent='';
 }
 const periodLabel=()=>d.type==='half'?`${d.hdate} 반일(${d.ampm==='am'?'오전':'오후'})`:`${d.start} ~ ${d.end||d.start}`;
+function cumRef(){ // 보관함의 다른 신청서 일수 (참고용)
+  const el=$('#cumRef');if(!el)return;
+  const cnt=x=>{if(x.days!==undefined&&x.days!==''&&!isNaN(+x.days))return +x.days;const p=String(x.period||'');if(/반일/.test(p))return 0.5;
+    const m=p.match(/(\d{4}-\d{2}-\d{2})\s*~\s*(\d{4}-\d{2}-\d{2})/);if(!m)return 0;let n=0;for(let t=pd(m[1]);t<=pd(m[2]);t.setDate(t.getDate()+1))if(school(t))n++;return n};
+  const curStart=curId?startOf(curId):'';
+  const L=lastList.filter(x=>String(x.id).startsWith('app-')&&x.status!=='작성 중'&&x.id!==curId&&startOf(x.id)!==curStart).sort((a,b)=>startOf(a.id).localeCompare(startOf(b.id)));
+  if(!L.length){el.hidden=true;return}
+  const tot=L.reduce((a,x)=>a+cnt(x),0);
+  const lab=x=>{const p=String(x.period||''),m=p.match(/(\d{4}-\d{2}-\d{2})\s*~\s*(\d{4}-\d{2}-\d{2})/);return (m?`${md2(m[1])}~${md2(m[2])}`:md2(startOf(x.id))+' 반일')+` ${cnt(x)}일`+(x.status==='승인'?'':` (${x.status})`)};
+  el.innerHTML=`📂 <b>보관함 참고</b>: 이 앱으로 낸 다른 신청서 ${L.length}건 · 합계 <b>${tot}일</b><br><span style="font-size:.92em">${L.map(lab).map(esc).join(', ')}</span><br><span style="font-size:.88em;color:#6b7a72">※ 이 앱을 쓰기 전에 사용한 기간은 빠져 있어요. 누적일수는 직접 확인해 적어 주세요.</span>`;
+  el.hidden=false;
+}
 const prevFor=()=>curId&&curId.startsWith(tab==='app'?'app-':'rep-')?curId:'';
 async function saveDraft(silent){
   const s=pd(d.type==='half'?d.hdate:d.start);
