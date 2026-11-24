@@ -6,3 +6,4 @@
 - 서버·API 없음(정적 파일). 서명·사진은 브라우저 밖으로 전송되지 않습니다.
 - Vercel: Framework Preset `Other`, Build Command·Output Directory 비움.
 - 양식이 바뀌면 배경 PNG와 `index.html` 안의 좌표(spec)를 함께 다시 만들어야 합니다.
+
