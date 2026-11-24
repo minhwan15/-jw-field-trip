@@ -185,7 +185,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 <script>
 {
 /* ── 설정: 학교/담임 정보 ── */
-const CONFIG={school:'정왕고등학교',teacherMail:'minhwankim@korea.kr'};
+const CONFIG={school:'정왕고등학교'};
 const FORMS=['가족동반여행','친·인척 방문','답사∙견학 활동','체험활동','가정학습'];
 const DEF_PURPOSE='3학년 수능시험 이후 문화체험 활동';
 const KEY='jw-trip-v1';
@@ -540,7 +540,7 @@ const doPrint=()=>{$$('#pv .page').forEach(p=>p.style.transform='none');window.p
 $('#bDone').onclick=()=>run('pdf',doPdf);
 $('#bShare').onclick=()=>run('share',doShare);
 $('#bPrint').onclick=()=>run('print',doPrint);
-$('#foot').innerHTML=`서명·사진은 이 브라우저 안에서만 쓰이며 어디에도 전송되지 않습니다. 글 입력 내용은 이 기기에만 임시 저장됩니다.${CONFIG.teacherMail?`<br>담임 메일: ${esc(CONFIG.teacherMail)} · 공유는 자동 전송이 아니므로 받는 사람을 직접 확인하고 보내세요.`:''}`;
+$('#foot').innerHTML=`서명·사진은 이 브라우저 안에서만 쓰이며 어디에도 전송되지 않습니다. 글 입력 내용은 이 기기에만 임시 저장됩니다.<br>공유는 자동 전송이 아니므로 받는 사람(담임 선생님)을 직접 확인하고 보내세요.`;
 
 fill();modeUI();autoDays();buildDays();setTab('app');
 }
