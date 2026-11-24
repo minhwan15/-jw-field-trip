@@ -124,10 +124,10 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
     <div id="halfBox" hidden><div class="row"><label>날짜<input type="date" data-k="hdate"></label><label>시간<select data-k="ampm"><option value="am">오전 (1~3교시)</option><option value="pm">오후 (5~7교시)</option></select></label></div></div>
     <details class="sched" open><summary>참고: 현장체험 가능일·필수 출석일 일정표</summary>
       <a href="schedule.png" target="_blank" rel="noopener"><img src="schedule.png" alt="11월 23일부터 1월 6일까지 날짜별 필수 출석일과 현장체험 가능일 일정표" width="567" height="628" loading="lazy"></a>
-      <p class="hint" style="margin:6px 0 0">필수 출석일은 체험학습 기간에 넣을 수 없어요. 그림을 누르면 크게 볼 수 있습니다.</p>
+      <p class="hint" style="margin:6px 0 0">필수 출석일은 가급적 피하고, 부득이하면 담임 선생님과 미리 상의하세요. 그림을 누르면 크게 볼 수 있습니다.</p>
     </details>
     <div class="row"><label>출석 인정 신청일수<input data-k="days" inputmode="decimal"></label><label>금회까지 누적 사용기간(일)<input data-k="cum" inputmode="decimal"></label></div>
-    <p class="hint">신청일수는 주말을 뺀 평일 수로 자동 계산됩니다. 공휴일·재량휴업일이 끼면 직접 고쳐 주세요. 누적은 이번 신청분까지 더한 일수입니다(연간 20일 이내).</p>
+    <p class="hint">신청일수는 주말과 휴일(12/25, 1/1)을 뺀 수업일 수로 자동 계산됩니다. 다른 휴업일이 끼면 직접 고쳐 주세요. 누적은 이번 신청분까지 더한 일수입니다(연간 20일 이내).</p>
   </section>
   <section class="app">
     <h2><b>3</b>규정 확인</h2>
@@ -217,7 +217,12 @@ const span=()=>{ // 캘린더상의 체험 날짜 목록
   const s=pd(d.start),e=pd(d.end);if(!s)return[];
   const out=[];for(let x=s;(!e||x<=e)&&out.length<15;x=addD(x,1)){out.push(x);if(!e)break}
   return out};
-const weekdays=()=>span().filter(x=>x.getDay()%6!==0).length;
+/* 학사일정(일정표 기준): 휴일은 일수에서 빼고, 필수 출석일은 막지 않고 확인 권장으로만 알림 */
+const HOLI=['2026-12-25','2027-01-01'];
+const MUST={'2026-11-23':'필수 출석일','2026-11-24':'필수 출석일','2026-11-25':'필수 출석일','2026-11-26':'필수 출석일','2026-11-27':'필수 출석일','2026-12-03':'필수 출석일(대입 합격자 등록·정시 원서접수 유의사항 교육, 학생회장 선거)','2026-12-11':'필수 출석일(수시 미등록 충원합격 등록 유의사항 교육)','2026-12-18':'필수 출석일(대입 합격자 등록·정시 원서 접수 유의사항 재교육)','2026-12-28':'필수 출석일','2027-01-05':'필수 출석일(졸업식 예행 연습)','2027-01-06':'졸업식'};
+const key=x=>`${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`;
+const school=x=>x.getDay()%6!==0&&!HOLI.includes(key(x));
+const weekdays=()=>span().filter(school).length;
 const autoDays=()=>{if(d.daysManual)return;d.days=d.type==='half'?(d.hdate?'0.5':''):(d.start&&d.end?String(weekdays()):'')};
 const md=x=>x?`${x.getMonth()+1}/${x.getDate()}`:'';
 const ymdK=x=>x?`${x.getFullYear()}. ${x.getMonth()+1}. ${x.getDate()}.`:'';
@@ -292,7 +297,7 @@ const SPEC=JSON.parse(document.getElementById('spec').textContent);
 const FM={};SPEC.F.forEach(f=>FM[f.k]=f);
 const BG=['p1.png','p2.png','p3.png'];
 const FF={m:"'Malgun Gothic','맑은 고딕','Noto Sans KR',sans-serif",mb:"'Malgun Gothic','맑은 고딕','Noto Sans KR',sans-serif",h:"'휴먼명조','HumanMyeongjo','HYMyeongJo','Noto Serif KR',serif"};
-const rows=()=>d.type==='half'?(d.hdate?[pd(d.hdate)]:[]):span().filter(x=>x.getDay()%6);
+const rows=()=>d.type==='half'?(d.hdate?[pd(d.hdate)]:[]):span().filter(school);
 const ymd=x=>({y:x.getFullYear(),m:x.getMonth()+1,d:x.getDate(),w:WD[x.getDay()]});
 const NAMEBOX=['appPn','appSn','repPn','repSn'];
 function txt(f,t,extra=''){ // 원본 글자 자리와 같은 크기·글꼴로 한 칸에 씀
@@ -448,6 +453,8 @@ function check(){
   if(!d.lRel)E('인솔자 관계를 입력하세요',K('lRel'));
   if(!d.lPhone)E('인솔자 휴대폰을 입력하세요',K('lPhone'));else if(!TEL.test(d.lPhone))E('인솔자 휴대폰 번호 형식이 맞지 않아요',K('lPhone'));
   const lbl=i=>`${i+1}일차${days[i]?`(${md(days[i])})`:''}`;
+  const mustIn=(t?(d.hdate?[pd(d.hdate)]:[]):cal).filter(x=>MUST[key(x)]);
+  if(mustIn.length)W(`기간에 ${mustIn.map(x=>`${md(x)}(${WD[x.getDay()]}) ${MUST[key(x)]}`).join(', ')}이 들어 있어요. 부득이한 경우라면 담임 선생님과 미리 상의하세요`,K(t?'hdate':'start'));
   if(tab==='app'){
     if(!d.c1)E('세부 규칙·불허기간 확인에 체크하세요',K('c1'));
     if(t&&!d.c2)E('반일 단위: 당일 수업 참여 여부 확인에 체크하세요',K('c2'));
