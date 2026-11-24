@@ -128,7 +128,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 /* ===== 원본 양식(한글에서 저장한 PDF) 배경 + 값 ===== */
 .page{position:relative;width:595pt;height:841pt;background:#fff;color:#000;overflow:hidden}
 .page .bg{position:absolute;left:0;top:0;width:595pt;height:841pt}
-.page .ov{position:absolute;white-space:pre;overflow:hidden;color:#000;margin:0;padding:0}
+.page .ov{position:absolute;white-space:pre;overflow:visible;color:#000;margin:0;padding:0}
 .page .cv{position:absolute;background:#fff}
 #cap{position:fixed;left:-10000px;top:0}
 @media(max-width:900px){main{grid-template-columns:minmax(0,1fr)}#side{position:static}#pv{max-height:none}}
@@ -390,7 +390,7 @@ function put(k,v){ // 값이 있으면 (원본 빈칸 문구를 흰색으로 덮
 }
 const tick=(k,on)=>{const f=FM[k];return on?`<div class="ov" style="left:${f.x}pt;width:${2*(f.cx-f.x)}pt;top:${f.top-1}pt;height:${f.h}pt;line-height:${f.h}pt;font-size:${f.size*1.15}pt;font-weight:700;text-align:center;font-family:'Noto Sans KR',sans-serif">✓</div>`:''};
 const sigImg=k=>{const f=FM[k];if(!sig[k])return '';const cy=f.top+f.h/2;return `<img class="ov" src="${sig[k]}" alt="" style="left:${f.cx-24}pt;width:44pt;top:${cy-12}pt;height:24pt;object-fit:contain">`};
-function formO(p){const o=SPEC.OPT[p][d.form];if(!o)return '';const[cx,top,h,size]=o;return `<div class="ov" style="left:${cx-8}pt;width:16pt;top:${top}pt;height:${h}pt;line-height:${h}pt;font-size:${size*.85}pt;text-align:center;font-family:${FF.m}">○</div>`}
+function formO(p){const o=SPEC.OPT[p][d.form];if(!o)return '';const[cx,top,h,size]=o;return `<div class="ov" style="left:${cx-8}pt;width:16pt;top:${(top-size*.12).toFixed(2)}pt;height:${h}pt;line-height:${h}pt;font-size:${size*.85}pt;text-align:center;font-family:${FF.m}">○</div>`}
 function periodTxt(wd,tail=''){
   if(d.type!=='day'||!d.start)return '';
   const s=ymd(pd(d.start)),e=d.end?ymd(pd(d.end)):null;
@@ -456,8 +456,17 @@ function pagePhoto(){
 const shrunk=new Set();
 function fitText(root){
   shrunk.clear();
-  root.querySelectorAll('.fit').forEach(el=>{let s=parseFloat(el.dataset.base);while(el.scrollWidth>el.clientWidth+1&&s>5.5){s-=.25;el.style.fontSize=s+'pt'}
-    if(s<parseFloat(el.dataset.base)*.75)shrunk.add(el.textContent)});
+  root.querySelectorAll('.fit').forEach(el=>{
+    const base=parseFloat(el.dataset.base);let s=base;
+    while(el.scrollWidth>el.clientWidth+1&&s>7){s-=.25;el.style.fontSize=s+'pt'}
+    if(el.scrollWidth>el.clientWidth+1){ // 한 줄로 안 되면 칸 안에서 두 줄로
+      const h=parseFloat(el.style.height);el.style.whiteSpace='normal';el.style.wordBreak='keep-all';el.style.overflowWrap='anywhere';
+      el.style.height=(h+4)+'pt';el.style.top=(parseFloat(el.style.top)-2)+'pt';s=Math.min(base,8);
+      const fitIn=()=>{el.style.fontSize=s+'pt';el.style.lineHeight=(s*1.15)+'pt'};fitIn();
+      while((el.scrollHeight>el.clientHeight+1||el.scrollWidth>el.clientWidth+1)&&s>5){s-=.25;fitIn()}
+      el.style.display='flex';el.style.alignItems='center';el.style.justifyContent=el.style.textAlign==='left'?'flex-start':'center';
+    }
+    if(s<base*.75)shrunk.add(el.textContent)});
 }
 
 const typos=window.JW_typos;
