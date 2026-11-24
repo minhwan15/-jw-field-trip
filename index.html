@@ -74,6 +74,9 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 #issues .act button{border:1px solid var(--g);background:transparent;color:var(--ink);font:inherit;font-size:13px;font-weight:500;border-radius:8px;padding:6px 12px;min-height:36px;cursor:pointer}
 #issues .act button.go{background:var(--g);color:#fff}
 #issues small{color:var(--mute)}
+.sched{margin:0 0 10px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:light-dark(#fafbfa,#151a17)}
+.sched summary{cursor:pointer;font-size:14px;font-weight:500;min-height:32px;display:flex;align-items:center}
+.sched img{display:block;width:100%;height:auto;margin-top:6px;border-radius:6px;background:#fff}
 .bad{border-color:var(--warn)!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--warn) 35%,transparent)}
 #forms.bad{border:0;box-shadow:none;outline:2px solid var(--warn);outline-offset:4px;border-radius:8px}
 #plans.bad{box-shadow:none}
@@ -119,6 +122,10 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
     <div class="chips"><label><input type="radio" name="type" value="day" checked>일 단위</label><label><input type="radio" name="type" value="half">반일 단위 (4시간 미만)</label></div>
     <div id="dayBox"><div class="row"><label>시작일<input type="date" data-k="start"></label><label>종료일<input type="date" data-k="end"></label></div></div>
     <div id="halfBox" hidden><div class="row"><label>날짜<input type="date" data-k="hdate"></label><label>시간<select data-k="ampm"><option value="am">오전 (1~3교시)</option><option value="pm">오후 (5~7교시)</option></select></label></div></div>
+    <details class="sched" open><summary>참고: 현장체험 가능일·필수 출석일 일정표</summary>
+      <a href="schedule.png" target="_blank" rel="noopener"><img src="schedule.png" alt="11월 23일부터 1월 6일까지 날짜별 필수 출석일과 현장체험 가능일 일정표" width="567" height="628" loading="lazy"></a>
+      <p class="hint" style="margin:6px 0 0">필수 출석일은 체험학습 기간에 넣을 수 없어요. 그림을 누르면 크게 볼 수 있습니다.</p>
+    </details>
     <div class="row"><label>출석 인정 신청일수<input data-k="days" inputmode="decimal"></label><label>금회까지 누적 사용기간(일)<input data-k="cum" inputmode="decimal"></label></div>
     <p class="hint">신청일수는 주말을 뺀 평일 수로 자동 계산됩니다. 공휴일·재량휴업일이 끼면 직접 고쳐 주세요. 누적은 이번 신청분까지 더한 일수입니다(연간 20일 이내).</p>
   </section>
