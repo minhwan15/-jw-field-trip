@@ -65,7 +65,7 @@ function doPost(e) {
   const lock = LockService.getScriptLock();
   lock.waitLock(25000);
   try {
-    const f = { submit: submit_, draft: draft_, status: status_, mine: mine_, tlist: tlist_, tget: tget_, treview: treview_ }[b.action];
+    const f = { submit: submit_, draft: draft_, status: status_, mine: mine_, mypdf: mypdf_, tlist: tlist_, tget: tget_, treview: treview_ }[b.action];
     return out_(f ? f(b) : { ok: false, msg: '알 수 없는 요청입니다.' });
   } catch (err) {
     return out_({ ok: false, msg: String(err && err.message || err) });
@@ -173,6 +173,14 @@ function mine_(b) { // 학생: 보낸 신청 내용을 작성칸으로 다시 �
   if (!r) throw new Error('불러올 신청을 찾을 수 없습니다.');
   let data = {}; try { data = JSON.parse(r[C['데이터']] || '{}'); } catch (e) { }
   return { ok: true, item: pub_(r), data: data };
+}
+function mypdf_(b) { // 학생: 담임이 승인한 서류 PDF(서명·사진 포함, 제출 당시 그대로) 받기
+  const r = myRows_(b).filter(x => x[C['ID']] === str_(b.id, 80))[0];
+  if (!r) throw new Error('서류를 찾을 수 없습니다.');
+  if (r[C['상태']] !== '승인') throw new Error('담임 선생님이 승인한 뒤에 저장할 수 있어요.');
+  let pdf = '';
+  try { pdf = Utilities.base64Encode(DriveApp.getFileById(r[C['PDF파일ID']]).getBlob().getBytes()); } catch (e) { throw new Error('서류 파일을 찾을 수 없습니다. 담임 선생님께 문의하세요.'); }
+  return { ok: true, item: pub_(r), pdf: pdf };
 }
 function status_(b) {
   const list = myRows_(b).map(pub_);

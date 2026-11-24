@@ -286,15 +286,15 @@ input[readonly]{background:light-dark(#f0f3f1,#1a201d);color:var(--mute)}
   <button class="btn" id="reset" type="button">입력 내용 모두 지우기</button>
 </div>
 <div id="side">
-  <div class="bar"><button class="btn p" id="bDone">점검 후 이미지 저장</button><button class="btn" id="bShare">점검 후 공유</button><button class="btn" id="bPrint">점검 후 인쇄</button></div>
+  <div class="bar" id="localBar"><button class="btn p" id="bDone">점검 후 이미지 저장</button></div>
   <div id="msg"></div>
   <div id="issues"></div>
   <section id="rev" hidden>
     <h3>담임 선생님 검토</h3>
-    <p class="hint" style="margin:0 0 8px">쓰는 중에는 <b>보관함에 저장</b>, 다 썼으면 <b>점검 후 검토 요청</b>을 누르세요. 결과는 <b>📁 내 보관함</b>에서 확인해요.</p>
+    <p class="hint" style="margin:0 0 8px">다 썼으면 <b>점검 후 검토 요청</b>을 누르세요. 보낸 서류는 <b>📁 내 보관함</b>에 모이고, 담임 선생님이 승인하면 보관함에서 <b>이미지로 저장</b>해 나이스에 첨부해요. 쓰다가 보관함으로 가면 작성 중으로 자동 저장돼요.</p>
     <div id="curInfo" class="hint" style="margin:0 0 6px"></div>
     <input id="pin" type="hidden">
-    <div class="bar" style="margin:10px 0 0"><button class="btn p" id="bReq" type="button">점검 후 검토 요청</button><button class="btn" id="bDraft" type="button">💾 보관함에 저장</button></div>
+    <div class="bar" style="margin:10px 0 0"><button class="btn p" id="bReq" type="button">점검 후 검토 요청</button></div>
     <div id="revMsg"></div>
   </section>
   <div id="pv"></div>
@@ -705,15 +705,7 @@ async function makeImages(){ // 학생 저장용: 페이지마다 JPG 한 장 (�
 function dl(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
 const doPdf=async()=>{say('이미지 만드는 중…');try{const fs=await makeImages();for(const [i,f] of fs.entries()){if(i)await new Promise(r=>setTimeout(r,700));dl(f,f.name)}
   say(`✅ 이미지 ${fs.length}장(JPG)을 저장했습니다. 다운로드 폴더를 확인하세요.`)}catch(e){say('이미지를 만들지 못했습니다. 잠시 후 다시 눌러 주세요.')}};
-const doShare=async()=>{say('이미지 만드는 중…');try{
-  const fs=await makeImages();
-  if(navigator.canShare&&navigator.canShare({files:fs})){await navigator.share({files:fs,title:fname()});say('공유 창에서 받는 사람을 골라 직접 보내 주세요.')}
-  else{for(const [i,f] of fs.entries()){if(i)await new Promise(r=>setTimeout(r,700));dl(f,f.name)}say('이 기기는 파일 공유를 지원하지 않아 이미지를 내려받았습니다. 카카오톡·메일에 파일로 첨부해 주세요.')}
-}catch(e){if(e.name==='AbortError')say('공유를 취소했습니다.');else say('공유하지 못했습니다. 이미지 저장 후 직접 첨부해 주세요.')}};
-const doPrint=()=>{$$('#pv .page').forEach(p=>p.style.transform='none');window.print();fit()};
 $('#bDone').onclick=()=>run('pdf',doPdf);
-$('#bShare').onclick=()=>run('share',doShare);
-$('#bPrint').onclick=()=>run('print',doPrint);
 
 /* ── 담임 검토 (구글 시트 서버) ── */
 const API=(window.JW_API||'').trim();
@@ -749,7 +741,8 @@ function drawLocker(){
   $('#lList').innerHTML=keys.map(k=>{const {app,rep}=g.get(k),base=app||rep;
     const p=String(base.period||'');const m=p.match(/(\d{4}-\d{2}-\d{2})\s*~\s*(\d{4}-\d{2}-\d{2})/);
     const title=m?`${md2(m[1])} ~ ${md2(m[2])}`:md2(k)+(/반일/.test(p)?' 반일':'');
-    const row=(lab,x,btns)=>`<div class="lrow"><b class="k">${lab}</b>${x?BADGE(x.status):'<span class="badge" style="background:#b8c2bd">아직 없음</span>'}<span class="sp"></span>${btns}${x&&x.comment&&x.status==='보완 요청'?`<div class="cm"><b>보완 사항</b>\n${esc(x.comment)}</div>`:''}</div>`;
+    const img=x=>x&&x.status==='승인'?`<button class="btn s p" data-img="${esc(x.id)}">🖼 이미지 저장</button>`:x&&x.status!=='작성 중'?'<span class="gsub" style="margin:0">승인 후 이미지 저장</span>':'';
+    const row=(lab,x,btns)=>`<div class="lrow"><b class="k">${lab}</b>${x?BADGE(x.status):'<span class="badge" style="background:#b8c2bd">아직 없음</span>'}<span class="sp"></span>${img(x)}${btns}${x&&x.comment&&x.status==='보완 요청'?`<div class="cm"><b>보완 사항</b>\n${esc(x.comment)}</div>`:''}</div>`;
     return `<div class="lcard"><h3>${esc(title)}</h3><div class="lsub">${esc(base.dest||'')}${base.at?` · 최근 저장 ${esc(base.at)}`:''}</div>
       ${row('신청서',app,app?`<button class="btn s" data-open="${esc(app.id)}">열기</button>`:'')}
       ${row('결과보고서',rep,rep?`<button class="btn s" data-open="${esc(rep.id)}">열기</button>`:app&&app.status!=='작성 중'?`<button class="btn s p" data-asrep="${esc(app.id)}">결과보고서 쓰기</button>`:app?'<span class="gsub" style="margin:0">신청서 검토 요청 후 쓸 수 있어요</span>':'')}</div>`}).join('');
@@ -765,6 +758,24 @@ async function openItem(id,asRep){
     curId=asRep?null:id;dirty=false;save();showView('editor');fill();lockId(true);modeUI();buildDays();drawTerms();setTab(asRep||id.startsWith('rep-')?'rep':'app');curInfo();$('#lMsg').textContent='';
     $('#revMsg').textContent=asRep?'신청서의 기본 정보를 옮겨 왔어요. 결과보고서 내용·사진·서명을 채워 주세요.':'불러왔어요. 서명·사진은 다시 해 주세요.';$('#revMsg').style.color='#2e8b57';
   }catch(e){$('#lMsg').textContent='❌ '+e.message}
+}
+/* 담임이 승인한 PDF(제출 당시 서명·사진 포함)를 페이지별 JPG로 저장 */
+function loadPdfJs(){return window.pdfjsLib?Promise.resolve():new Promise((ok,no)=>{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';sc.onload=()=>{pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';ok()};sc.onerror=()=>no(new Error('변환 도구를 불러오지 못했어요'));document.head.append(sc)})}
+async function saveApproved(id,btn){
+  const old=btn.textContent;btn.disabled=true;btn.textContent='만드는 중…';
+  try{
+    const [j]=await Promise.all([api({action:'mypdf',...who(),id}),loadPdfJs()]);
+    const doc=await pdfjsLib.getDocument({data:Uint8Array.from(atob(j.pdf),c=>c.charCodeAt(0))}).promise;
+    const base=`교외체험학습_${j.item.doc}_${d.grade}-${d.cls}-${d.num}_${d.name}_${startOf(id)}`,names=['_1보고서','_2활동사진'];
+    for(let i=1;i<=doc.numPages;i++){
+      const page=await doc.getPage(i),vp=page.getViewport({scale:1666/page.getViewport({scale:1}).width}),c=document.createElement('canvas');c.width=vp.width;c.height=vp.height;
+      const ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);await page.render({canvasContext:ctx,viewport:vp}).promise;
+      const b=await new Promise(r=>c.toBlob(r,'image/jpeg',.92));if(i>1)await new Promise(r=>setTimeout(r,700));
+      dl(b,base+(doc.numPages>1?(j.item.doc==='결과보고서'?names[i-1]||'_'+i:'_'+i):'')+'.jpg');
+    }
+    $('#lMsg').textContent=`✅ ${j.item.doc} 이미지 ${doc.numPages}장을 저장했어요. 다운로드 폴더의 JPG를 나이스에 첨부하세요.`;
+  }catch(e){$('#lMsg').textContent='❌ '+e.message}
+  finally{btn.disabled=false;btn.textContent=old}
 }
 function newApp(){
   const keep={grade:d.grade,cls:d.cls,num:d.num,name:d.name,phone:d.phone};
@@ -796,7 +807,8 @@ const doReq=async()=>{
     const j=await api({action:'submit',doc:tab,...who(),start:key(s),period:periodLabel(),dest:d.dest,prevId:prevFor(),data:{...d,_sig:{appP:!!sig.appP,appS:!!sig.appS,repP:!!sig.repP,repS:!!sig.repS},_ph:[0,1,2,3,4].map(i=>!!photos[i])},pdf});
     const nm=tab==='app'?'신청서':'결과보고서';curId=j.id;dirty=false;curInfo();
     $('#revMsg').textContent=`✅ ${nm} 검토 요청 완료 (${j.status})`;$('#revMsg').style.color='#2e8b57';
-    modal(`<h3><span class="big">✅</span>전송 완료</h3><p>${nm} 검토 요청을 담임 선생님께 보냈어요. 상태: <b>${esc(j.status)}</b></p><p style="color:var(--mute);font-size:14px">담임 선생님의 승인·보완 사항은 <b>📁 내 보관함</b>에서 확인해요.</p>`,[{label:'내 보관함 보기',p:true,fn:showLocker},{label:'계속 보기'}]);
+    await showLocker();
+    modal(`<h3><span class="big">✅</span>전송 완료</h3><p>${nm} 검토 요청을 담임 선생님께 보냈어요. 상태: <b>${esc(j.status)}</b></p><p style="color:var(--mute);font-size:14px">담임 선생님이 <b>승인</b>하면 이 보관함에서 <b>🖼 이미지 저장</b>을 눌러 나이스에 첨부하세요. 보완 요청이 오면 보관함에 보완 사항이 표시돼요.</p>`,[{label:'확인',p:true}]);
   }catch(e){
     $('#revMsg').textContent='❌ 전송 실패: '+e.message;$('#revMsg').style.color='#e2553f';
     modal(`<h3>전송하지 못했어요</h3><p>${esc(e.message)}</p><p style="color:var(--mute);font-size:14px">잠시 후 다시 눌러 주세요. 계속 안 되면 이미지를 저장해 담임 선생님께 직접 보내 주세요.</p>`,[{label:'확인',p:true}]);
@@ -804,12 +816,12 @@ const doReq=async()=>{
   finally{$('#bReq').disabled=false}
 };
 if(API){
-  $('#rev').hidden=false;
+  $('#rev').hidden=false;$('#localBar').hidden=true;
   $('#pin').addEventListener('input',e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,4);e.target.classList.remove('bad')});
   $('#bReq').onclick=()=>{if(!pinOk())return;run('req',doReq)};
-  $('#bDraft').onclick=()=>saveDraft(false);
   $('#bNew').onclick=newApp;
-  $('#lList').addEventListener('click',e=>{const o=e.target.dataset?.open,r=e.target.dataset?.asrep;
+  $('#lList').addEventListener('click',e=>{const o=e.target.dataset?.open,r=e.target.dataset?.asrep,im=e.target.dataset?.img;
+    if(im){saveApproved(im,e.target);return}
     if(o)openItem(o,false);else if(r){const repId=r.replace(/^app-/,'rep-');lastList.some(y=>y.id===repId)?openItem(repId,false):openItem(r,true)}});
   $('#bLocker').onclick=async()=>{if(!$('#mainApp').hidden&&dirty)await saveDraft(true);showLocker()};
   document.addEventListener('input',e=>{if(e.target.closest&&e.target.closest('#form'))dirty=true});
