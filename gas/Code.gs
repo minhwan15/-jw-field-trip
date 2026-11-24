@@ -65,7 +65,7 @@ function doPost(e) {
   const lock = LockService.getScriptLock();
   lock.waitLock(25000);
   try {
-    const f = { submit: submit_, status: status_, tlist: tlist_, tget: tget_, treview: treview_ }[b.action];
+    const f = { submit: submit_, status: status_, mine: mine_, tlist: tlist_, tget: tget_, treview: treview_ }[b.action];
     return out_(f ? f(b) : { ok: false, msg: '알 수 없는 요청입니다.' });
   } catch (err) {
     return out_({ ok: false, msg: String(err && err.message || err) });
@@ -116,16 +116,33 @@ function submit_(b) {
 }
 
 /* 학생: 내 요청 현황 */
-function status_(b) {
+function digits_(x) { return String(x == null ? '' : x).replace(/\D/g, ''); }
+function phoneOk_(r, phone) { // 신청서에 적은 학생 휴대폰과 일치해야 함(적지 않은 경우는 통과)
+  let d = {}; try { d = JSON.parse(r[C['데이터']] || '{}'); } catch (e) { }
+  const saved = digits_(d.phone);
+  return !saved || saved === digits_(phone);
+}
+function myRows_(b) {
   const s = student_(b);
-  const v = rows_().v, h = hash_(s.pin), list = [];
-  let wrongPin = false;
+  if (!/^01\d{8,9}$/.test(digits_(b.phone))) throw new Error('휴대폰 번호를 확인하세요.');
+  const v = rows_().v, h = hash_(s.pin), out = [];
+  let wrong = false;
   for (let i = 1; i < v.length; i++) {
     if (!same_(v[i], s)) continue;
-    if (v[i][C['PIN']] !== h) { wrongPin = true; continue; }
-    list.push(pub_(v[i]));
+    if (v[i][C['PIN']] !== h || !phoneOk_(v[i], b.phone)) { wrong = true; continue; }
+    out.push(v[i]);
   }
-  if (!list.length && wrongPin) throw new Error('비밀번호가 다릅니다.');
+  if (!out.length && wrong) throw new Error('비밀번호 또는 휴대폰 번호가 다릅니다.');
+  return out;
+}
+function mine_(b) { // 학생: 보낸 신청 내용을 작성칸으로 다시 불러오기
+  const r = myRows_(b).filter(x => x[C['ID']] === str_(b.id, 80))[0];
+  if (!r) throw new Error('불러올 신청을 찾을 수 없습니다.');
+  let data = {}; try { data = JSON.parse(r[C['데이터']] || '{}'); } catch (e) { }
+  return { ok: true, item: pub_(r), data: data };
+}
+function status_(b) {
+  const list = myRows_(b).map(pub_);
   list.sort((a, c) => String(c.at).localeCompare(String(a.at)));
   return { ok: true, list: list };
 }
