@@ -139,6 +139,9 @@ input[readonly]{background:light-dark(#f0f3f1,#1a201d);color:var(--mute)}
 #mustNote{margin:0 0 10px;padding:10px 12px;border-radius:10px;background:light-dark(#fff4e8,#3a2a19);font-size:14px}
 #mustNote[hidden]{display:none}
 #revMsg{font-size:14px;margin-top:8px;font-weight:500}
+.meter{display:flex;align-items:center;gap:8px;font-size:13px;color:#c0682a;margin:4px 0 2px;font-weight:500}.meter b{font-size:15px}
+.meter.ok{color:#2e8b57}.meter.over{color:var(--warn)}
+.mbar{flex:0 0 90px;height:7px;border-radius:4px;background:light-dark(#e3e8e5,#2a302c);overflow:hidden}.mbar i{display:block;height:100%;background:currentColor;border-radius:4px}
 #actRow{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}#actRow .btn{flex:1 1 180px}#actRow #bReq,#actRow #bDone{flex:2 1 220px;font-size:16px}
 #rev{margin-top:8px}
 #rev h3{margin:0 0 6px;font-size:16px}
@@ -281,7 +284,7 @@ input[readonly]{background:light-dark(#f0f3f1,#1a201d);color:var(--mute)}
     <h2><b>6</b>결과보고 내용</h2>
     <div class="row"><label>제목<input data-k="title"></label></div>
     <div class="row"><label>보호자(동반자)<input data-k="comp" placeholder="비우면 보호자명(관계)"></label></div>
-    <p class="hint">느낀 점·배운 점을 하루 4줄 꽉 채워 쓰고, 하루 1장 사진(보호자 동반, 배경에 목적지가 드러나게)을 올리세요.</p>
+    <p class="hint">느낀 점·배운 점은 <b>오른쪽 서식의 4줄 칸</b>을 꽉 채워야 해요(이 입력칸 4줄이 아니에요). 칸 아래 <b>%가 90% 이상</b>이면 초록색으로 바뀌어요. 하루 1장 사진 하루 1장 사진(보호자 동반, 배경에 목적지가 드러나게)도 올리세요.</p>
     <div id="reps"></div>
   </section>
   <section class="rep" hidden>
@@ -364,7 +367,7 @@ document.addEventListener('input',e=>{
   if(el.name==='type'){d.type=el.value;d.daysManual=false}
   else if(el.name==='form')d.form=el.value;
   else if(el.dataset.plan!=null)d.plans[+el.dataset.plan]=el.value;
-  else if(el.dataset.rep!=null)d.reps[+el.dataset.rep]=el.value;
+  else if(el.dataset.rep!=null){d.reps[+el.dataset.rep]=el.value;repMeter(+el.dataset.rep)}
   else if(k){
     if(el.classList.contains('tel')){el.value=telFmt(el.value)}
     d[k]=el.type==='checkbox'?el.checked:el.value;
@@ -402,10 +405,10 @@ $('#terms').addEventListener('change',e=>{
 function buildDays(){
   const days=rows(),n=nRows();
   $('#plans').innerHTML=Array.from({length:n},(_,i)=>`<div class="day"><b>${i+1}일차 ${days[i]?`· ${md(days[i])}(${WD[days[i].getDay()]})`:''}</b><textarea data-plan="${i}" rows="2" placeholder="예) 경주 불국사·석굴암 답사"></textarea></div>`).join('');
-  $('#reps').innerHTML=Array.from({length:n},(_,i)=>`<div class="day"><b>${i+1}일차 ${days[i]?`· ${md(days[i])}(${WD[days[i].getDay()]})`:''}</b><textarea data-rep="${i}" rows="4" placeholder="느낀 점, 배운 점 (4줄 이상)"></textarea>
+  $('#reps').innerHTML=Array.from({length:n},(_,i)=>`<div class="day"><b>${i+1}일차 ${days[i]?`· ${md(days[i])}(${WD[days[i].getDay()]})`:''}</b><textarea data-rep="${i}" rows="6" placeholder="느낀 점, 배운 점 — 아래 %가 90% 이상 되게 (이 입력칸으로는 약 7~8줄)"></textarea><div class="meter" data-meter="${i}"></div>
     <div class="photo"><img alt="" ${photos[i]?`src="${photos[i]}"`:'hidden'}><input type="file" accept="image/*" data-ph="${i}"><button class="btn s" type="button" data-phx="${i}" ${photos[i]?'':'hidden'}>삭제</button></div></div>`).join('');
   $$('[data-plan]').forEach(t=>t.value=d.plans[+t.dataset.plan]||'');
-  $$('[data-rep]').forEach(t=>t.value=d.reps[+t.dataset.rep]||'');
+  $$('[data-rep]').forEach(t=>{t.value=d.reps[+t.dataset.rep]||'';repMeter(+t.dataset.rep)});
 }
 document.addEventListener('change',async e=>{
   const i=e.target.dataset?.ph;if(i==null||!e.target.files[0])return;
@@ -474,6 +477,16 @@ const ymdDot=(s,f)=>{const x=pd(s);return x?f(ymd(x)):''};
 const page=(i,body)=>`<div class="page"><img class="bg" src="${BG[i]}" alt="">${body}</div>`;
 /* 결과 4줄 나누기: 원본 줄 너비·10pt 맑은 고딕 기준 */
 const cvs=document.createElement('canvas').getContext('2d');
+function repMeter(i){ // 서식 4줄 칸 기준 채움 %
+  const el=document.querySelector(`[data-meter="${i}"]`);if(!el)return;const f0=FM[`rl${i}_0`];if(!f0)return;
+  const wpt=f0.R-f0.x-1.5,v=d.reps[i]||'';
+  if(!v.trim()){el.className='meter';el.innerHTML='<span class="mbar"></span><span>서식 4줄 칸 <b>0%</b></span>';return}
+  const L=wrap(v,wpt);cvs.font=`10pt ${FF.m}`;const W=wpt*96/72;
+  const used=L.length>4?L.length:(L.length-1)+Math.min(1,cvs.measureText(L[L.length-1].t).width/W);
+  const pct=Math.round(used/4*100),cls=L.length>4?'over':pct>=90?'ok':'';
+  el.className='meter '+cls;
+  el.innerHTML=`<span class="mbar"><i style="width:${Math.min(100,pct)}%"></i></span><span>서식 4줄 칸 <b>${L.length>4?'넘침':pct+'%'}</b> ${L.length>4?`· ${L.length}줄 → 4줄로 줄여 주세요`:pct>=90?'· 좋아요!':`· 약 ${(4-used).toFixed(1)}줄 더`}</span>`;
+}
 function wrap(text,wpt){
   cvs.font=`10pt ${FF.m}`;const W=wpt*96/72,out=[];
   for(const para of String(text||'').split('\n')){
