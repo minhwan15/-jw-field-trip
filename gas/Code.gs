@@ -9,7 +9,7 @@
  *       - 다음 사용자 인증 정보로 실행: 나
  *       - 액세스 권한이 있는 사용자: 모든 사용자
  *     → 배포 → 나온 웹 앱 URL(…/exec)을 앱 config.js에 넣습니다
- *  4) '설정' 탭에 반별 담임 비밀번호를 적습니다 (*, * 줄은 전체 열람용 관리자 비밀번호)
+ *  4) '설정' 탭에 반별 담임 비밀번호를 적습니다
  *
  * 코드를 고친 뒤에는 배포 → 배포 관리 → 수정(연필) → 버전: 새 버전 → 배포 (URL은 그대로 유지)
  */
@@ -28,7 +28,6 @@ function setup() {
   const cf = ss.getSheetByName(CONF) || ss.insertSheet(CONF);
   if (cf.getLastRow() === 0) {
     cf.appendRow(['학년', '반', '담임 비밀번호', '비고']);
-    cf.appendRow(['*', '*', '', '관리자(전체 열람) 비밀번호 — 비워 두면 사용 안 함']);
     for (let i = 1; i <= 12; i++) cf.appendRow([3, i, '', '3학년 ' + i + '반 담임 비밀번호']);
     cf.setFrozenRows(1);
   }
@@ -144,12 +143,11 @@ function teacher_(b) {
   for (let i = 1; i < v.length; i++) {
     const g = String(v[i][0]).trim(), c = String(v[i][1]).trim(), p = String(v[i][2]).trim();
     if (!p || p !== pw) continue;
-    if (g === '*' && c === '*') return { all: true, label: '관리자' };
-    if (g === grade && c === cls) return { all: false, grade: g, cls: c, label: g + '-' + c + ' 담임' };
+    if (g === grade && c === cls) return { grade: g, cls: c, label: g + '-' + c + ' 담임' };
   }
   throw new Error('학년·반 또는 비밀번호가 맞지 않습니다.');
 }
-function inScope_(t, r) { return t.all || (String(r[C['학년']]) === t.grade && String(r[C['반']]) === t.cls); }
+function inScope_(t, r) { return String(r[C['학년']]) === t.grade && String(r[C['반']]) === t.cls; }
 
 function tlist_(b) {
   const t = teacher_(b), v = rows_().v, list = [];
