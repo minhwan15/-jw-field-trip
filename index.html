@@ -31,6 +31,9 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 'Noto Sans KR
 header{background:var(--g);color:#fff;padding:18px max(4vw,16px) 0}
 header h1{margin:0;font-size:clamp(22px,3vw,30px);line-height:1.15}
 header p{margin:4px 0 14px;opacity:.85;font-size:14px}
+.htop{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.tbtn{display:inline-flex;align-items:center;gap:6px;background:#fff;color:#1f4d3a;font-weight:700;font-size:15px;text-decoration:none;border-radius:10px;padding:10px 16px;min-height:44px;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.tbtn:hover{background:#e3efe8}
 .tabs{display:flex;gap:6px}
 .tabs button{border:0;background:rgba(255,255,255,.14);color:#fff;font:inherit;font-weight:500;padding:10px 18px;border-radius:10px 10px 0 0;min-height:44px;cursor:pointer}
 .tabs button.on{background:var(--bg);color:var(--ink)}
@@ -133,7 +136,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 </head>
 <body>
 <header>
-  <h1>정왕고 체험학습 작성기</h1>
+  <div class="htop"><h1>정왕고 체험학습 작성기</h1><a class="tbtn" href="teacher.html" id="tLink" hidden>👩‍🏫 담임 검토 화면</a></div>
   <p>입력하면 학교 양식(서식 1·2)에 그대로 채워집니다. 작성·출력이 곧 허가는 아니며, 담임교사의 최종 허가 통보를 받은 뒤 실시하세요.</p>
   <nav class="tabs"><button id="tApp" class="on">서식 1 · 신청서</button><button id="tRep">서식 2 · 결과보고서</button></nav>
 </header>
@@ -648,7 +651,7 @@ const doReq=async()=>{
   finally{$('#bReq').disabled=false}
 };
 if(API){
-  $('#rev').hidden=false;
+  $('#rev').hidden=false;$('#tLink').hidden=false;
   try{$('#pin').value=localStorage.getItem('jw-pin')||''}catch(e){}
   $('#pin').addEventListener('input',e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,4);e.target.classList.remove('bad')});
   $('#bReq').onclick=()=>{if(!pinOk())return;run('req',doReq)};
