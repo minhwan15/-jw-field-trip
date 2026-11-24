@@ -67,7 +67,12 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .audit li.w b{background:#d99a1e}.audit li.i b{background:#6b7a72}
 .audit .okmsg{color:var(--ok);font-weight:700}
 .prev{margin-top:8px;padding:8px 10px;border-radius:8px;background:light-dark(#fff4e8,#3a2a19);font-size:14px;white-space:pre-wrap}
-@media(max-width:900px){#app{grid-template-columns:minmax(0,1fr)}#list{max-height:none}#detail .pdf{height:70vh}}
+#back{display:none}
+@media(max-width:900px){#app{grid-template-columns:minmax(0,1fr)}#list{max-height:none}#detail .pdf{height:70vh}
+  #app:not(.showd) #detail-wrap{display:none}#app.showd>div:first-child{display:none}
+  #back{display:inline-flex;align-items:center;margin-bottom:10px}
+  #detail{padding:12px}main{padding:12px 10px 60px}
+  .dec{position:sticky;bottom:0;background:var(--card);padding:10px 0;margin:0 -2px}}
 </style>
 </head>
 <body>
@@ -89,7 +94,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
       <div id="msg"></div>
       <div id="list"></div>
     </div>
-    <div id="detail" class="card"><p class="empty">왼쪽 목록에서 학생의 요청을 고르세요.</p></div>
+    <div id="detail-wrap"><button class="btn" id="back" type="button">← 목록으로</button><div id="detail" class="card"><p class="empty">왼쪽 목록에서 학생의 요청을 고르세요.</p></div></div>
   </section>
 </main>
 <script src="config.js"></script>
@@ -124,7 +129,7 @@ async function load(){
   catch(e){say(e.message,true)}
 }
 async function open(id){
-  cur=items.find(x=>x.id===id);drawList();
+  cur=items.find(x=>x.id===id);drawList();$('#app').classList.add('showd');window.scrollTo(0,0);
   $('#detail').innerHTML='<p class="empty">서류를 불러오는 중…</p>';
   try{
     const j=await api({action:'tget',...cred,id});cur=j.item;
@@ -276,6 +281,7 @@ async function review(st){
 $('#filters').addEventListener('click',e=>{const f=e.target.closest('[data-f]');if(f){filter=f.dataset.f;drawList()}});
 $('#list').addEventListener('click',e=>{const b=e.target.closest('[data-id]');if(b)open(b.dataset.id)});
 $('#bRefresh').onclick=load;
+$('#back').onclick=()=>{$('#app').classList.remove('showd');window.scrollTo(0,0)};
 $('#bLogout').onclick=()=>{try{sessionStorage.removeItem('jw-t')}catch(e){}location.reload()};
 $('#ladm').onchange=e=>{$('#lg').disabled=$('#lc').disabled=e.target.checked};
 async function login(c){
