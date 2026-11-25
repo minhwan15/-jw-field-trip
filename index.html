@@ -844,7 +844,7 @@ const normP=v=>String(v||'').replace(/\s+/g,'');
 function planSync(){ // 이미 다른 날에 쓴 추천 일정은 고르지 못하게, 같은 일정이면 경고
   const P=$$('[data-plan]').map(t=>normP(t.value));
   $$('[data-psel]').forEach(sl=>{const i=+sl.dataset.psel;
-    [...sl.options].forEach(o=>{if(!o.value)return;const used=P.some((v,j)=>j!==i&&v===normP(o.value));o.disabled=used;o.textContent=(used?'✔ (다른 날 사용) ':'')+o.value});
+    [...sl.options].forEach(o=>{if(!o.value)return;const j=P.findIndex((v,k)=>k!==i&&v===normP(o.value));o.disabled=j>=0;const t=o.value+(j>=0?`  ✔${j+1}일차`:'');if(o.textContent!==t)o.textContent=t});
     const m=[...sl.options].find(o=>o.value&&normP(o.value)===P[i]);sl.value=m?m.value:'';sl.classList.toggle('on',!!m)});
   $$('[data-pdup]').forEach(el=>{const i=+el.dataset.pdup,v=P[i];const dup=!!v&&P.some((w,j)=>j!==i&&w===v);el.hidden=!dup;const t=document.querySelector(`[data-plan="${i}"]`);if(t)t.classList.toggle('bad',dup)});
 }
