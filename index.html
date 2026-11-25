@@ -724,9 +724,9 @@ async function pageCanvases(){ // 미리보기 페이지를 A4 한 장씩 고해
   }
   cap.innerHTML='';return out;
 }
-async function makePdf(){ // 담임 검토 요청용(내부 전송)
+async function makePdf(fix){ // 담임 검토 요청용(내부 전송)
   if(!window.jspdf)throw new Error('lib');
-  const {jsPDF}=window.jspdf,pdf=new jsPDF({unit:'mm',format:'a4'}),cs=await pageCanvases();
+  const {jsPDF}=window.jspdf,pdf=new jsPDF({unit:'mm',format:'a4'}),cs=await pageCanvases();if(fix)await fix(cs);
   cs.forEach((c,i)=>{if(i)pdf.addPage();pdf.addImage(c.toDataURL('image/jpeg',.9),'JPEG',0,0,210,297)});
   return pdf.output('blob');
 }
@@ -926,7 +926,12 @@ async function teacherEdit(){
   $('#whoName').textContent='담임 수정 모드 · 불러오는 중…';
   try{
     const j=await api({action:'tget',...TEDIT.cred,id:TEDIT.id,assets:1,nopdf:1});
-    if(!j.assets){$('#whoName').textContent='✏️ 담임 수정 모드 · 수정 불가(예전 제출본)';modal('<h3>이 서류는 여기서 고칠 수 없어요</h3><p>예전 방식으로 제출되어 서명·사진이 따로 저장되어 있지 않아요. 고치면 서명·사진이 빠지니, 학생에게 <b>보완 요청</b>을 보내 주세요.</p>',[{label:'검토 화면으로',p:true,fn:()=>location.href='teacher.html'}]);return}
+    if(!j.assets){ // 서명·사진 자료가 없으면 원래 PDF에서 그 자리를 그대로 옮겨 씀
+      const k=await api({action:'tget',...TEDIT.cred,id:TEDIT.id});
+      if(!k.pdf)throw new Error('원래 서류 PDF를 찾을 수 없어요.');
+      TEDIT.oldPdf=k.pdf;const f=j.data||{};const T1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+      j.assets={sig:Object.fromEntries(Object.keys(SIGN).map(x=>[x,f._sig&&f._sig[x]?T1:''])),photos:[0,1,2,3,4].map(i=>f._ph&&f._ph[i]?T1:'')};
+    }
     const src={...j.data};delete src._sig;delete src._ph;
     Object.keys(d).forEach(k=>delete d[k]);Object.assign(d,{plans:[],reps:[]},src);TEDIT.orig=JSON.parse(JSON.stringify(d));TEDIT.ph=[0,1,2,3,4].map(i=>photos[i]||'');
     Object.keys(sig).forEach(k=>{sig[k]=(j.assets.sig||{})[k]||'';sigRaw[k]=''});
@@ -938,7 +943,7 @@ async function teacherEdit(){
     $('#mainApp').hidden=false;$('#tabs').hidden=true;$('#rev').hidden=false;$('#bReq').hidden=false;$('#bDone').hidden=true;
     $('#bReq').textContent='수정 내용 저장';$('#bReq').onclick=()=>run('req',doTEdit);
     fill();lockId(true);modeUI();buildDays();drawTerms();setTab(tab);render();
-    $('#curInfo').innerHTML='서명은 학생·보호자가 한 그대로 들어가요. 내용만 고친 뒤 <b>수정 내용 저장</b>을 누르세요. 상태(승인·대기)는 바뀌지 않아요.';
+    $('#curInfo').innerHTML=(TEDIT.oldPdf?'서명·사진은 미리보기엔 안 보여도 저장할 때 원래 서류에서 그대로 옮겨져요. ':'')+'서명은 학생·보호자가 한 그대로 들어가요. 내용만 고친 뒤 <b>수정 내용 저장</b>을 누르세요. 상태(승인·대기)는 바뀌지 않아요.';
   }catch(e){$('#whoName').textContent='❌ '+e.message}
 }
 function fieldName(k){
@@ -952,13 +957,26 @@ function teditChanges(){
   [0,1,2,3,4].forEach(i=>{if((TEDIT.ph[i]||'')!==(photos[i]||''))out.push(`${i+1}일차 사진: ${photos[i]?'바꿈':'뺌'}`)});
   return out;
 }
+async function keepOld(cs){ // 원래 PDF의 서명·사진 영역을 새 페이지에 그대로 복사
+  await loadPdfJs();
+  const doc=await pdfjsLib.getDocument({data:Uint8Array.from(atob(TEDIT.oldPdf),c=>c.charCodeAt(0))}).promise;
+  const S=2.1*4/3,rects=tab==='app'?[[0,['appP','appS'].map(k=>sigRect(k))]]:[[0,['repP','repS'].map(k=>sigRect(k))],[1,[0,1,2,3,4].map(i=>{const b=FM['ph'+i]&&FM['ph'+i].box;return b?[b[0],b[1],b[2]-b[0],b[3]-b[1]]:null})]];
+  for(const [pi,rs] of rects){
+    if(pi>=doc.numPages||!cs[pi])continue;
+    const pg=await doc.getPage(pi+1),v0=pg.getViewport({scale:1}),vp=pg.getViewport({scale:cs[pi].width/v0.width});
+    const oc=document.createElement('canvas');oc.width=vp.width;oc.height=vp.height;await pg.render({canvasContext:oc.getContext('2d'),viewport:vp}).promise;
+    const ctx=cs[pi].getContext('2d');ctx.setTransform(1,0,0,1,0,0);
+    rs.filter(Boolean).forEach(([x,y,w,h])=>{const X=x*S,Y=y*S,W=w*S,H=h*S;ctx.fillStyle='#fff';ctx.drawImage(oc,X,Y,W,H,X,Y,W,H)});
+  }
+}
+function sigRect(k){const f=FM[k];if(!f)return null;const cy=f.top+f.h/2;return [f.cx-28,cy-15,56,30]}
 async function doTEdit(){
   const changes=teditChanges();
   if(!changes.length){modal('<h3>바뀐 내용이 없어요</h3><p>고친 곳이 없어서 저장하지 않았어요.</p>',[{label:'확인',p:true}]);return}
   const s=pd(d.type==='half'?d.hdate:d.start);
   modal('<h3><span class="spin"></span>수정 내용 저장 중</h3><p style="margin:0">서류를 다시 만들어 저장하고 있어요.</p>',[],true);
   try{
-    const pdf=await blob64(await makePdf());
+    const pdf=await blob64(await makePdf(TEDIT.oldPdf?keepOld:null));
     const j=await api({action:'tedit',...TEDIT.cred,id:TEDIT.id,changes,period:periodLabel(),dest:d.dest,data:{...d,_sig:Object.fromEntries(Object.keys(sig).map(k=>[k,!!sig[k]])),_ph:[0,1,2,3,4].map(i=>!!photos[i])},pdf});
     const sy=j.sync&&!j.sync.off?(j.sync.ok?' · 쉬운출결에도 다시 반영했어요':' · ⚠️ 쉬운출결 반영 실패: '+j.sync.msg):'';
     try{sessionStorage.setItem('jw-tmsg','✏️ 내용을 고쳐 저장했어요 (학생 보관함에 고친 부분이 표시돼요)'+sy+'\n'+changes.map(x=>'· '+x).join('\n'))}catch(e){}
