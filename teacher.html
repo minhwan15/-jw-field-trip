@@ -50,6 +50,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .dec{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;position:sticky;bottom:0;z-index:5;background:var(--card);padding:12px 0;border-top:1px solid var(--line)}
 .dec .btn{min-height:52px;font-size:17px;font-weight:700;padding:10px 26px}
 .dec .btn.ok,.dec .btn.fix{min-width:130px}
+.tnote{background:#e6f4ea;color:#1e6b3a;border-radius:10px;padding:10px 12px;font-weight:700;margin:0 0 10px}
 .btn.ok.done{background:transparent!important;color:var(--g)!important;border:2px solid var(--g)!important}
 .topdec{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.topdec .badge{flex:none}.topdec .btn{min-height:44px;font-size:15px;font-weight:700;padding:8px 18px}
 .empty{color:var(--mute);text-align:center;padding:60px 10px}
@@ -141,7 +142,7 @@ async function open(id){
     if(j.pdf){const b=Uint8Array.from(atob(j.pdf),c=>c.charCodeAt(0));pdfUrl=URL.createObjectURL(new Blob([b],{type:'application/pdf'}))}
     const fn=`${cur.doc}_${cur.grade}-${cur.cls}-${cur.num}_${cur.name}.pdf`;
     $('#detail').innerHTML=`<div class="head"><div><h2>${esc(cur.grade)}-${esc(cur.cls)} ${esc(cur.num)}번 ${esc(cur.name)} · ${esc(cur.doc)}</h2>
-      <div style="font-size:14px;color:var(--mute)">${esc(cur.period)}${cur.dest?` · ${esc(cur.dest)}`:''} · 요청 ${esc(cur.at)}</div></div><div class="topdec">${badge(cur.status)}<button class="btn ok${cur.status==='승인'?' done':''}" id="bOk2">${cur.status==='승인'?'✔ 승인됨 · 다시 전송':'✔ 승인 및 쉬운출결앱으로 전송'}</button><button class="btn fix" id="bFix2">보완 요청 쓰기</button></div></div>
+      <div style="font-size:14px;color:var(--mute)">${esc(cur.period)}${cur.dest?` · ${esc(cur.dest)}`:''} · 요청 ${esc(cur.at)}</div></div><div class="topdec">${badge(cur.status)}<button class="btn ok${cur.status==='승인'?' done':''}" id="bOk2">${cur.status==='승인'?'✔ 승인됨 · 다시 전송':'✔ 승인 및 쉬운출결앱으로 전송'}</button><button class="btn fix" id="bFix2">보완 요청 쓰기</button><button class="btn" id="bEdit">✏️ 내용 직접 수정</button></div></div>
       <div class="audit" id="audit"><h3>🖍 자동 점검 <span><button class="btn" id="bAudit" style="min-height:36px;padding:4px 10px">다시 점검</button> <button class="btn" id="bHl" style="min-height:36px;padding:4px 10px">형광펜 끄기</button></span></h3><div id="auditBody">점검하는 중…</div></div>
       <div id="pages">${pdfUrl?'':'<p class="empty">PDF를 찾을 수 없어요.</p>'}</div>
       ${pdfUrl?`<div class="tools" style="margin-top:8px"><a class="btn" href="${pdfUrl}" target="_blank" rel="noopener">PDF 새 창에서 보기</a><a class="btn" href="${pdfUrl}" download="${esc(fn)}">PDF 내려받기</a></div>`:''}
@@ -154,7 +155,7 @@ async function open(id){
     $('#bPut').onclick=()=>{const L=(lastAudit||[]).filter(x=>x.lv!=='i');if(!L.length){say('넣을 점검 항목이 없어요.');return}
       const t=L.map((x,i)=>`${i+1}. ${x.m}`).join('\n');$('#cm').value=($('#cm').value.trim()?$('#cm').value.trim()+'\n':'')+t;$('#cm').focus()};
     await drawPages();runAudit();
-    $('#bOk2').onclick=()=>review('승인');$('#bFix2').onclick=()=>{$('#cm').scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>$('#cm').focus({preventScroll:true}),300)};
+    $('#bOk2').onclick=()=>review('승인');$('#bEdit').onclick=()=>location.href='./?tedit='+encodeURIComponent(cur.id);$('#bFix2').onclick=()=>{$('#cm').scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>$('#cm').focus({preventScroll:true}),300)};
     $('#bOk').onclick=()=>review('승인');$('#bFix').onclick=()=>review('보완 요청');
   }catch(e){$('#detail').innerHTML=`<p class="empty err">${esc(e.message)}</p>`}
 }
@@ -297,7 +298,8 @@ $('#bLogout').onclick=()=>{try{sessionStorage.removeItem('jw-t');localStorage.re
 async function login(c){
   $('#lmsg').textContent='확인하는 중…';$('#lmsg').className='';
   try{const j=await api({action:'tlist',...c});cred=c;try{localStorage.setItem('jw-t',JSON.stringify(c))}catch(e){}
-    $('#login').hidden=true;$('#app').hidden=false;items=j.list;$('#who').textContent=j.who;drawList();say(`요청 ${items.length}건`)}
+    $('#login').hidden=true;$('#app').hidden=false;items=j.list;$('#who').textContent=j.who;drawList();say(`요청 ${items.length}건`);
+    const op=new URLSearchParams(location.search).get('open');if(op&&items.some(x=>x.id===op)){history.replaceState(null,'','teacher.html');await open(op);let m='';try{m=sessionStorage.getItem('jw-tmsg')||'';sessionStorage.removeItem('jw-tmsg')}catch(e){}if(m){say(m);const n=document.createElement('p');n.className='tnote';n.textContent=m;$('#detail').prepend(n)}}}
   catch(e){$('#lmsg').textContent=e.message;$('#lmsg').className='err';$('#login').hidden=false;$('#app').hidden=true}
 }
 $('#bLogin').onclick=()=>login({grade:$('#lg').value,cls:$('#lc').value.trim(),tpw:$('#lp').value});

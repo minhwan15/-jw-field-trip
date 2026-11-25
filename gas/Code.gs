@@ -15,7 +15,7 @@
  * 코드를 고친 뒤에는 배포 → 배포 관리 → 수정(연필) → 버전: 새 버전 → 배포 (URL은 그대로 유지)
  */
 const SHEET = '신청', CONF = '설정', FOLDER_NAME = '체험학습_검토_PDF';
-const HEAD = ['ID', '구분', '학년', '반', '번호', '이름', '기간', '목적지', '상태', '보완사항', '요청시각', '검토시각', '검토자', '요청횟수', 'PIN', 'PDF파일ID', '데이터', '기록함'];
+const HEAD = ['ID', '구분', '학년', '반', '번호', '이름', '기간', '목적지', '상태', '보완사항', '요청시각', '검토시각', '검토자', '요청횟수', 'PIN', 'PDF파일ID', '데이터', '기록함', '자산ID'];
 const C = {}; HEAD.forEach((h, i) => C[h] = i);
 const DOCNAME = { app: '신청서', rep: '결과보고서' };
 
@@ -65,7 +65,7 @@ function doPost(e) {
   const lock = LockService.getScriptLock();
   lock.waitLock(25000);
   try {
-    const f = { submit: submit_, draft: draft_, status: status_, mine: mine_, mypdf: mypdf_, tlist: tlist_, tget: tget_, treview: treview_ }[b.action];
+    const f = { submit: submit_, draft: draft_, status: status_, mine: mine_, mypdf: mypdf_, tlist: tlist_, tget: tget_, treview: treview_, tedit: tedit_ }[b.action];
     return out_(f ? f(b) : { ok: false, msg: '알 수 없는 요청입니다.' });
   } catch (err) {
     return out_({ ok: false, msg: String(err && err.message || err) });
@@ -144,6 +144,7 @@ function submit_(b) {
     cnt, "'" + h, "'" + file.getId(), "'" + str_(JSON.stringify(b.data || {}), 40000)];
   if (ri > 0) sh.getRange(ri + 1, 1, 1, row.length).setValues([row]);
   else sh.appendRow(row);
+  saveAssets_(sh, ri > 0 ? ri + 1 : sh.getLastRow(), ri > 0 ? v[ri][C['자산ID']] : '', b.assets, id);
   dropDraft_(sh, s, b.prevId, id);
   return { ok: true, id: id, status: String(row[C['상태']]) };
 }
@@ -223,13 +224,42 @@ function find_(t, id) {
   }
   throw new Error('요청을 찾을 수 없습니다.');
 }
+function saveAssets_(sh, rowNo, oldId, assets, id) { // 서명·사진(담임이 대신 고칠 때 다시 그리기용)
+  if (!assets) return;
+  const hd = sh.getRange(1, C['자산ID'] + 1);
+  if (hd.getValue() !== '자산ID') { hd.setValue('자산ID'); try { sh.hideColumns(C['자산ID'] + 1); } catch (e) { } }
+  if (oldId) { try { DriveApp.getFileById(String(oldId)).setTrashed(true); } catch (e) { } }
+  const f = folder_().createFile(Utilities.newBlob(JSON.stringify(assets), 'application/json', id + '_자료.json'));
+  sh.getRange(rowNo, C['자산ID'] + 1).setValue("'" + f.getId());
+}
 function tget_(b) {
   const t = teacher_(b), f = find_(t, str_(b.id, 80));
   let pdf = '';
   try { pdf = Utilities.base64Encode(DriveApp.getFileById(f.r[C['PDF파일ID']]).getBlob().getBytes()); } catch (e) { }
   let data = {};
   try { data = JSON.parse(f.r[C['데이터']] || '{}'); } catch (e) { }
-  return { ok: true, item: pub_(f.r), pdf: pdf, data: data };
+  let assets = null;
+  if (b.assets && f.r[C['자산ID']]) { try { assets = JSON.parse(DriveApp.getFileById(String(f.r[C['자산ID']])).getBlob().getDataAsString()); } catch (e) { } }
+  return { ok: true, item: pub_(f.r), pdf: b.nopdf ? '' : pdf, data: data, assets: assets };
+}
+function tedit_(b) { // 담임이 학생 서류 내용을 직접 고쳐 저장(상태는 그대로)
+  const t = teacher_(b), f = find_(t, str_(b.id, 80));
+  if (f.r[C['상태']] === DRAFT) throw new Error('학생이 아직 작성 중인 서류입니다.');
+  if (!b.pdf || String(b.pdf).length > 30e6) throw new Error('PDF가 없거나 너무 큽니다.');
+  const r = f.r, fname = r[C['구분']] + '_' + r[C['학년']] + '-' + r[C['반']] + '-' + r[C['번호']] + '_' + r[C['이름']] + '_담임수정.pdf';
+  const file = folder_().createFile(Utilities.newBlob(Utilities.base64Decode(String(b.pdf)), 'application/pdf', fname));
+  if (r[C['PDF파일ID']]) { try { DriveApp.getFileById(String(r[C['PDF파일ID']])).setTrashed(true); } catch (e) { } }
+  const data = "'" + str_(JSON.stringify(b.data || {}), 40000);
+  f.sh.getRange(f.i + 1, C['기간'] + 1, 1, 2).setValues([["'" + str_(b.period, 60), "'" + str_(b.dest, 100)]]);
+  f.sh.getRange(f.i + 1, C['PDF파일ID'] + 1, 1, 2).setValues([["'" + file.getId(), data]]);
+  f.sh.getRange(f.i + 1, C['검토자'] + 1).setValue("'" + t.label + ' (내용 수정 ' + String(now_()).replace(/^'/, '') + ')');
+  let sync = null;
+  if (r[C['상태']] === '승인') {
+    const nr = f.sh.getRange(f.i + 1, 1, 1, HEAD.length).getValues()[0];
+    sync = pushClassCalendar_(nr);
+    if (!sync.off) f.sh.getRange(f.i + 1, C['기록함'] + 1).setValue("'" + (sync.ok ? '✔ ' : '✖ ') + sync.msg + ' (' + String(now_()).replace(/^'/, '') + ')');
+  }
+  return { ok: true, status: String(r[C['상태']]), sync: sync };
 }
 /* ── 담임 기록함(class-calendar) 연동: 승인 시 해당 반 기록함에 체험학습 기록 등록 ── */
 const HOLIDAYS = ['2026-12-25', '2027-01-01'];

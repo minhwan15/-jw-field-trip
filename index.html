@@ -140,6 +140,7 @@ input[readonly]{background:light-dark(#f0f3f1,#1a201d);color:var(--mute)}
 #mustNote[hidden]{display:none}
 #revMsg{font-size:14px;margin-top:8px;font-weight:500}
 .sigtip{font-style:normal;font-size:12px;font-weight:700;color:light-dark(#c5221f,#ff8a80);margin-left:4px}
+.tedit [data-sig]{display:none}.tedit #actRow #reset{display:none}
 .pwnote{margin:6px 0 14px;padding:10px 12px;border-radius:10px;border:2px solid #d93025;background:light-dark(#fdecea,#3a1513);color:light-dark(#c5221f,#ff8a80);font-size:14px;line-height:1.55;font-weight:500}.pwnote b{font-weight:800}
 .chips{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}.chips button{font:inherit;font-size:13px;padding:4px 9px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}.chips button.on{background:var(--g);color:#fff;border-color:var(--g)}
 .meter{display:flex;align-items:center;gap:8px;font-size:13px;color:#c0682a;margin:4px 0 2px;font-weight:500}.meter b{font-size:15px}
@@ -337,7 +338,8 @@ const sig={appP:'',appS:'',repP:'',repS:''};
 const photos=[];
 let tab='app';
 try{Object.assign(d,JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){}
-const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}};
+const TEDIT=(()=>{try{const id=new URLSearchParams(location.search).get('tedit'),c=JSON.parse(localStorage.getItem('jw-t')||sessionStorage.getItem('jw-t')||'null');return id&&c?{id,cred:c}:null}catch(e){return null}})();
+const save=()=>{if(TEDIT)return;try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}};
 
 /* 날짜 계산 */
 const span=()=>{ // 캘린더상의 체험 날짜 목록
@@ -437,7 +439,7 @@ const CVS={};
 function sigStore(){try{return JSON.parse(localStorage.getItem(sigKey())||'{}')}catch(e){return {}}}
 function sigPut(role,raw,trim){const st=sigStore();if(raw)st[role]={raw,trim};else delete st[role];try{localStorage.setItem(sigKey(),JSON.stringify(st))}catch(e){}}
 function paintSig(k){const c=CVS[k];if(!c)return;const {cv,ctx}=c;ctx.clearRect(0,0,cv.width,cv.height);if(sigRaw[k]&&cv.width){const im=new Image();im.onload=()=>{ctx.clearRect(0,0,cv.width,cv.height);ctx.drawImage(im,0,0,cv.width,cv.height)};im.src=sigRaw[k]}}
-function loadSigs(){const st=sigStore();Object.keys(SIGN).forEach(k=>{const v=st[ROLE(k)];sigRaw[k]=v?v.raw:'';sig[k]=v?v.trim:'';paintSig(k)})}
+function loadSigs(){if(TEDIT)return;const st=sigStore();Object.keys(SIGN).forEach(k=>{const v=st[ROLE(k)];sigRaw[k]=v?v.raw:'';sig[k]=v?v.trim:'';paintSig(k)})}
 $$('[data-sig]').forEach(box=>{
   const k=box.dataset.sig;
   box.innerHTML=`<div class="sighead"><span>${SIGN[k]} <em class="sigtip">✍️ ${SIGHINT[k]}</em></span><button class="btn s" type="button">지우기</button></div><canvas class="sig"></canvas>`;
@@ -840,6 +842,7 @@ async function saveDraft(silent){
     curId=j.id;dirty=false;curInfo();$('#revMsg').textContent='💾 보관함에 저장했어요.';$('#revMsg').style.color='#2e8b57';return true;
   }catch(e){$('#revMsg').textContent='❌ 저장 실패: '+e.message;$('#revMsg').style.color='#e2553f';return false}
 }
+function curAssets(){const ks=tab==='app'?['appP','appS']:['repP','repS'];return {sig:Object.fromEntries(ks.map(k=>[k,sig[k]||''])),photos:tab==='rep'?[0,1,2,3,4].map(i=>photos[i]||''):[]}}
 const doReq=async()=>{
   const s=pd(d.type==='half'?d.hdate:d.start);
   if(!s||!d.name||!d.cls||!d.num){modal('<h3>먼저 입력해 주세요</h3><p>학생 정보(반·번호·이름)와 체험학습 날짜가 있어야 검토 요청을 보낼 수 있어요.</p>',[{label:'확인',p:true}]);return}
@@ -849,7 +852,7 @@ const doReq=async()=>{
     step('1/2 서류를 만드는 중…');
     const pdf=await blob64(await makePdf());
     step('2/2 담임 선생님께 보내는 중…');
-    const j=await api({action:'submit',doc:tab,...who(),start:key(s),period:periodLabel(),dest:d.dest,prevId:prevFor(),data:{...d,_sig:{appP:!!sig.appP,appS:!!sig.appS,repP:!!sig.repP,repS:!!sig.repS},_ph:[0,1,2,3,4].map(i=>!!photos[i])},pdf});
+    const j=await api({action:'submit',doc:tab,...who(),start:key(s),period:periodLabel(),dest:d.dest,prevId:prevFor(),data:{...d,_sig:{appP:!!sig.appP,appS:!!sig.appS,repP:!!sig.repP,repS:!!sig.repS},_ph:[0,1,2,3,4].map(i=>!!photos[i])},pdf,assets:curAssets()});
     const nm=tab==='app'?'신청서':'결과보고서';curId=j.id;dirty=false;curInfo();
     $('#revMsg').textContent=`✅ ${nm} 검토 요청 완료 (${j.status})`;$('#revMsg').style.color='#2e8b57';
     await showLocker();
@@ -915,7 +918,38 @@ $('#gTch').onsubmit=async e=>{
 };
 $('#bLogout').onclick=()=>modal('<h3>로그아웃할까요?</h3><p>이 기기에 임시 저장된 작성 내용도 함께 지워요. 검토 요청을 보낸 신청은 다음에 로그인해서 다시 불러올 수 있어요.</p>',
   [{label:'로그아웃',p:true,fn:()=>{try{sessionStorage.removeItem('jw-s');localStorage.removeItem('jw-s');localStorage.removeItem(KEY)}catch(e){}location.reload()}},{label:'취소'}]);
-if(SES)enter(SES);else{$('#gate').hidden=false;if(d.name){$('#sname').value=d.name;$('#sc').value=d.cls||'';$('#sn').value=d.num||'';$('#sphone').value=d.phone||'';$('#sg').value=d.grade||'3'}}
+async function teacherEdit(){
+  $('#gate').hidden=true;$('#who').hidden=false;$('#bLocker').hidden=true;$('#bLogout').hidden=true;
+  $('#whoName').textContent='담임 수정 모드 · 불러오는 중…';
+  try{
+    const j=await api({action:'tget',...TEDIT.cred,id:TEDIT.id,assets:1,nopdf:1});
+    if(!j.assets){$('#whoName').textContent='✏️ 담임 수정 모드 · 수정 불가(예전 제출본)';modal('<h3>이 서류는 여기서 고칠 수 없어요</h3><p>예전 방식으로 제출되어 서명·사진이 따로 저장되어 있지 않아요. 고치면 서명·사진이 빠지니, 학생에게 <b>보완 요청</b>을 보내 주세요.</p>',[{label:'검토 화면으로',p:true,fn:()=>location.href='teacher.html'}]);return}
+    const src={...j.data};delete src._sig;delete src._ph;
+    Object.keys(d).forEach(k=>delete d[k]);Object.assign(d,{plans:[],reps:[]},src);
+    Object.keys(sig).forEach(k=>{sig[k]=(j.assets.sig||{})[k]||'';sigRaw[k]=''});
+    photos.length=0;(j.assets.photos||[]).forEach((p,i)=>photos[i]=p||'');
+    const it=j.item;tab=TEDIT.id.startsWith('rep-')?'rep':'app';
+    $('#whoName').innerHTML=`✏️ <b>담임 수정 모드</b> · ${esc(it.grade)}-${esc(it.cls)} ${esc(it.num)}번 ${esc(it.name)} · ${esc(it.doc)}`;
+    const back=document.createElement('button');back.className='tbtn';back.type='button';back.textContent='← 검토 화면으로';back.onclick=()=>location.href='teacher.html';$('#who').append(back);
+    document.body.classList.add('tedit');
+    $('#mainApp').hidden=false;$('#tabs').hidden=true;$('#rev').hidden=false;$('#bReq').hidden=false;$('#bDone').hidden=true;
+    $('#bReq').textContent='수정 내용 저장';$('#bReq').onclick=()=>run('req',doTEdit);
+    fill();lockId(true);modeUI();buildDays();drawTerms();setTab(tab);render();
+    $('#curInfo').innerHTML='서명은 학생·보호자가 한 그대로 들어가요. 내용만 고친 뒤 <b>수정 내용 저장</b>을 누르세요. 상태(승인·대기)는 바뀌지 않아요.';
+  }catch(e){$('#whoName').textContent='❌ '+e.message}
+}
+async function doTEdit(){
+  const s=pd(d.type==='half'?d.hdate:d.start);
+  modal('<h3><span class="spin"></span>수정 내용 저장 중</h3><p style="margin:0">서류를 다시 만들어 저장하고 있어요.</p>',[],true);
+  try{
+    const pdf=await blob64(await makePdf());
+    const j=await api({action:'tedit',...TEDIT.cred,id:TEDIT.id,period:periodLabel(),dest:d.dest,data:{...d,_sig:Object.fromEntries(Object.keys(sig).map(k=>[k,!!sig[k]])),_ph:[0,1,2,3,4].map(i=>!!photos[i])},pdf});
+    const sy=j.sync&&!j.sync.off?(j.sync.ok?' · 쉬운출결에도 다시 반영했어요':' · ⚠️ 쉬운출결 반영 실패: '+j.sync.msg):'';
+    try{sessionStorage.setItem('jw-tmsg','✏️ 내용을 고쳐 저장했어요'+sy)}catch(e){}
+    location.href='teacher.html?open='+encodeURIComponent(TEDIT.id);
+  }catch(e){modal(`<h3>저장하지 못했어요</h3><p>${esc(e.message)}</p>`,[{label:'확인',p:true}])}
+}
+if(TEDIT)teacherEdit();else if(SES)enter(SES);else{$('#gate').hidden=false;if(d.name){$('#sname').value=d.name;$('#sc').value=d.cls||'';$('#sn').value=d.num||'';$('#sphone').value=d.phone||'';$('#sg').value=d.grade||'3'}}
 }
 </script>
 </body>
