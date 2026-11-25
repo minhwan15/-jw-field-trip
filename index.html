@@ -142,6 +142,7 @@ input[readonly]{background:light-dark(#f0f3f1,#1a201d);color:var(--mute)}
 .sigtip{font-style:normal;font-size:12px;font-weight:700;color:light-dark(#c5221f,#ff8a80);margin-left:4px}
 .tedit [data-sig]{display:none}.tedit #actRow #reset{display:none}
 .lrow .cm.ed{background:light-dark(#fff6e0,#3a3018);border-left-color:#e0a100}.lrow .cm.ed span{font-weight:400;font-size:12px;color:var(--mute)}
+.psel.on{color:var(--ink);border-style:solid;border-color:var(--g)}
 .psel{width:100%;margin:0 0 6px;font-size:14px;padding:7px 8px;border-radius:8px;border:1px dashed var(--line);background:var(--card);color:var(--mute)}
 .pdup{color:var(--warn);font-size:13px;font-weight:700;margin-top:4px}
 .pwnote{margin:6px 0 14px;padding:10px 12px;border-radius:10px;border:2px solid #d93025;background:light-dark(#fdecea,#3a1513);color:light-dark(#c5221f,#ff8a80);font-size:14px;line-height:1.55;font-weight:500}.pwnote b{font-weight:800}
@@ -842,8 +843,9 @@ const PLAN_SUG=['오이도 해안 일대 탐방 및 서해안 지형·생태 관
 const normP=v=>String(v||'').replace(/\s+/g,'');
 function planSync(){ // 이미 다른 날에 쓴 추천 일정은 고르지 못하게, 같은 일정이면 경고
   const P=$$('[data-plan]').map(t=>normP(t.value));
-  $$('[data-psel]').forEach(sl=>{const i=+sl.dataset.psel;sl.value='';
-    [...sl.options].forEach(o=>{if(!o.value)return;const used=P.some((v,j)=>j!==i&&v===normP(o.value));o.disabled=used;o.textContent=(used?'✔ (다른 날 사용) ':'')+o.value});});
+  $$('[data-psel]').forEach(sl=>{const i=+sl.dataset.psel;
+    [...sl.options].forEach(o=>{if(!o.value)return;const used=P.some((v,j)=>j!==i&&v===normP(o.value));o.disabled=used;o.textContent=(used?'✔ (다른 날 사용) ':'')+o.value});
+    const m=[...sl.options].find(o=>o.value&&normP(o.value)===P[i]);sl.value=m?m.value:'';sl.classList.toggle('on',!!m)});
   $$('[data-pdup]').forEach(el=>{const i=+el.dataset.pdup,v=P[i];const dup=!!v&&P.some((w,j)=>j!==i&&w===v);el.hidden=!dup;const t=document.querySelector(`[data-plan="${i}"]`);if(t)t.classList.toggle('bad',dup)});
 }
 document.addEventListener('change',e=>{const sl=e.target.closest&&e.target.closest('[data-psel]');if(!sl||!sl.value)return;
