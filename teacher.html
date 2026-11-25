@@ -293,16 +293,16 @@ $('#filters').addEventListener('click',e=>{const f=e.target.closest('[data-f]');
 $('#list').addEventListener('click',e=>{const b=e.target.closest('[data-id]');if(b)open(b.dataset.id)});
 $('#bRefresh').onclick=load;
 $('#back').onclick=()=>{$('#app').classList.remove('showd');window.scrollTo(0,0)};
-$('#bLogout').onclick=()=>{try{sessionStorage.removeItem('jw-t')}catch(e){}location.href='./'};
+$('#bLogout').onclick=()=>{try{sessionStorage.removeItem('jw-t');localStorage.removeItem('jw-t')}catch(e){}location.href='./'};
 async function login(c){
   $('#lmsg').textContent='확인하는 중…';$('#lmsg').className='';
-  try{const j=await api({action:'tlist',...c});cred=c;try{sessionStorage.setItem('jw-t',JSON.stringify(c))}catch(e){}
+  try{const j=await api({action:'tlist',...c});cred=c;try{localStorage.setItem('jw-t',JSON.stringify(c))}catch(e){}
     $('#login').hidden=true;$('#app').hidden=false;items=j.list;$('#who').textContent=j.who;drawList();say(`요청 ${items.length}건`)}
   catch(e){$('#lmsg').textContent=e.message;$('#lmsg').className='err';$('#login').hidden=false;$('#app').hidden=true}
 }
 $('#bLogin').onclick=()=>login({grade:$('#lg').value,cls:$('#lc').value.trim(),tpw:$('#lp').value});
 $('#lp').addEventListener('keydown',e=>{if(e.key==='Enter')$('#bLogin').click()});
-try{const c=JSON.parse(sessionStorage.getItem('jw-t')||'null');if(c)login(c)}catch(e){}
+try{const c=JSON.parse(localStorage.getItem('jw-t')||sessionStorage.getItem('jw-t')||'null');if(c)login(c)}catch(e){}
 if(!API){$('#lmsg').textContent='검토 서버 주소가 아직 설정되지 않았습니다(config.js).';$('#lmsg').className='err'}
 }
 </script>

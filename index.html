@@ -206,6 +206,7 @@ input[readonly]{background:light-dark(#f0f3f1,#1a201d);color:var(--mute)}
         <label class="w3">비밀번호 (숫자 4자리)<input id="spin" type="password" inputmode="numeric" maxlength="4" placeholder="••••"></label>
       </div>
       <button class="btn p gbtn" type="submit">로그인하고 작성 시작</button>
+      <p class="gsub" style="margin-top:8px;font-size:13px">이 브라우저에서는 로그인이 계속 유지돼요. 학교·공용 컴퓨터라면 다 쓴 뒤 오른쪽 위 <b>로그아웃</b>을 눌러 주세요.</p>
       <p class="gmsg" id="gStuMsg"></p>
     </form>
     <form class="gcard t" id="gTch" autocomplete="off">
@@ -884,7 +885,7 @@ function enter(sv){
   fill();lockId(true);modeUI();autoDays();buildDays();drawTerms();setTab('app');
   if(API){showLocker()}else showView('editor');
 }
-let SES=null;try{SES=JSON.parse(sessionStorage.getItem('jw-s')||'null')}catch(e){}
+let SES=null;try{SES=JSON.parse(localStorage.getItem('jw-s')||sessionStorage.getItem('jw-s')||'null')}catch(e){}
 $('#sc').addEventListener('input',e=>e.target.value=e.target.value.replace(/\D/g,''));
 $('#sn').addEventListener('input',e=>e.target.value=e.target.value.replace(/\D/g,''));
 $('#spin').addEventListener('input',e=>e.target.value=e.target.value.replace(/\D/g,'').slice(0,4));
@@ -900,7 +901,7 @@ $('#gStu').onsubmit=async e=>{
     try{await api({action:'status',grade:sv.grade,cls:sv.cls,num:sv.num,name:sv.name,phone:sv.phone,pin:sv.pin})}
     catch(err){m.style.color='';m.textContent=err.message+(/다릅니다/.test(err.message)?' (처음 검토 요청 때 정한 비밀번호를 입력하세요)':'');return}
     m.style.color='';m.textContent='';}
-  try{sessionStorage.setItem('jw-s',JSON.stringify(sv))}catch(err){}
+  try{localStorage.setItem('jw-s',JSON.stringify(sv))}catch(err){}
   enter(sv);
 };
 $('#gTch').onsubmit=async e=>{
@@ -909,11 +910,11 @@ $('#gTch').onsubmit=async e=>{
   if(!c.cls||!c.tpw)return m.textContent='반과 비밀번호를 입력하세요.';
   if(!API)return m.textContent='검토 서버가 아직 연결되지 않았어요.';
   m.style.color='var(--mute)';m.textContent='확인하는 중…';
-  try{await api({action:'tlist',...c});sessionStorage.setItem('jw-t',JSON.stringify(c));location.href='teacher.html'}
+  try{await api({action:'tlist',...c});localStorage.setItem('jw-t',JSON.stringify(c));location.href='teacher.html'}
   catch(err){m.style.color='';m.textContent=err.message}
 };
 $('#bLogout').onclick=()=>modal('<h3>로그아웃할까요?</h3><p>이 기기에 임시 저장된 작성 내용도 함께 지워요. 검토 요청을 보낸 신청은 다음에 로그인해서 다시 불러올 수 있어요.</p>',
-  [{label:'로그아웃',p:true,fn:()=>{try{sessionStorage.removeItem('jw-s');localStorage.removeItem(KEY)}catch(e){}location.reload()}},{label:'취소'}]);
+  [{label:'로그아웃',p:true,fn:()=>{try{sessionStorage.removeItem('jw-s');localStorage.removeItem('jw-s');localStorage.removeItem(KEY)}catch(e){}location.reload()}},{label:'취소'}]);
 if(SES)enter(SES);else{$('#gate').hidden=false;if(d.name){$('#sname').value=d.name;$('#sc').value=d.cls||'';$('#sn').value=d.num||'';$('#sphone').value=d.phone||'';$('#sg').value=d.grade||'3'}}
 }
 </script>
