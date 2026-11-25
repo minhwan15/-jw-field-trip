@@ -367,7 +367,7 @@ const MUST=window.JW_MUST;
 const key=x=>`${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`;
 const school=x=>x.getDay()%6!==0&&!HOLI.includes(key(x));
 const weekdays=()=>span().filter(school).length;
-const autoDays=()=>{if(d.daysManual)return;d.days=d.type==='half'?(d.hdate?'0.5':''):(d.start&&d.end?String(weekdays()):'')};
+const autoDays=()=>{if(!d.daysManual)d.days=d.type==='half'?(d.hdate?'0.5':''):(d.start&&d.end?String(weekdays()):'');if(typeof autoCum==='function')autoCum()};
 const md=x=>x?`${x.getMonth()+1}/${x.getDate()}`:'';
 const ymdK=x=>x?`${x.getFullYear()}. ${x.getMonth()+1}. ${x.getDate()}.`:'';
 const nRows=()=>5;
@@ -391,7 +391,8 @@ document.addEventListener('input',e=>{
     if(el.classList.contains('tel')){el.value=telFmt(el.value)}
     d[k]=el.type==='checkbox'?el.checked:el.value;
     $$(`[data-k=${k}]`).forEach(o=>{if(o!==el){if(o.type==='checkbox')o.checked=el.checked;else o.value=el.value}});
-    if(k==='days'){d.daysManual=el.value!=='';if(!d.daysManual){autoDays();el.value=d.days||''}}
+    if(k==='days'){d.daysManual=el.value!=='';if(!d.daysManual){autoDays();el.value=d.days||''}else autoCum()}
+    if(k==='cum'){d.cumManual=el.value!=='';if(!d.cumManual)autoCum();else cumRef()}
     if(['start','end','hdate'].includes(k)){if(k==='start'&&d.end&&d.end<d.start){d.end=d.start;$('[data-k=end]').value=d.start}autoDays();$('[data-k=days]').value=d.days||'';buildDays();drawTerms()}
   }
   if(el.name==='type'){autoDays();$('[data-k=days]').value=d.days||'';modeUI();buildDays()}
@@ -773,7 +774,7 @@ const BADGE=st=>`<span class="badge ${st==='승인'?'ok':st==='보완 요청'?'f
 const startOf=id=>String(id).slice(-10);
 const md2=s=>{const x=pd(s);return x?`${x.getMonth()+1}/${x.getDate()}(${WD[x.getDay()]})`:''};
 function showView(v){$('#locker').hidden=v!=='locker';$('#mainApp').hidden=v!=='editor';$('#tabs').hidden=v!=='editor';window.scrollTo(0,0);if(v==='editor'){loadSigs();render()}}
-function curInfo(){const id=curId,doc=tab==='app'?'신청서':'결과보고서';$('#curInfo').innerHTML=id&&id.startsWith(tab==='app'?'app-':'rep-')?`지금 쓰는 서류: <b>${doc}</b> · 보관함에 저장됨`:`지금 쓰는 서류: <b>새 ${doc}</b> · 아직 보관함에 없음`;cumRef()}
+function curInfo(){const id=curId,doc=tab==='app'?'신청서':'결과보고서';$('#curInfo').innerHTML=id&&id.startsWith(tab==='app'?'app-':'rep-')?`지금 쓰는 서류: <b>${doc}</b> · 보관함에 저장됨`:`지금 쓰는 서류: <b>새 ${doc}</b> · 아직 보관함에 없음`;autoCum()}
 async function showLocker(){
   showView('locker');$('#lWho').textContent=$('#whoName').textContent;
   if(!API){$('#lList').innerHTML='<p class="lempty">검토 서버가 연결되지 않아 보관함을 쓸 수 없어요.</p>';return}
@@ -800,7 +801,7 @@ async function openItem(id,asRep){
   try{
     const j=await api({action:'mine',...who(),id});const src={...j.data};delete src._sig;delete src._ph;
     const keep={grade:d.grade,cls:d.cls,num:d.num,name:d.name,phone:d.phone};
-    Object.keys(d).forEach(k=>delete d[k]);Object.assign(d,{plans:[],reps:[]},src,keep);
+    Object.keys(d).forEach(k=>delete d[k]);Object.assign(d,{plans:[],reps:[]},src,keep);if(d.cumManual===undefined&&d.cum)d.cumManual=true;
     if(asRep){if(!d.repDate)d.repDate=today();}
     photos.length=0;loadSigs();
     curId=asRep?null:id;dirty=false;save();showView('editor');fill();lockId(true);modeUI();buildDays();drawTerms();setTab(asRep||id.startsWith('rep-')?'rep':'app');curInfo();cumRef();$('#lMsg').textContent='';
@@ -827,22 +828,45 @@ async function saveApproved(id,btn){
 }
 function newApp(){
   const keep={grade:d.grade,cls:d.cls,num:d.num,name:d.name,phone:d.phone};
-  Object.keys(d).forEach(k=>delete d[k]);Object.assign(d,{type:'day',ampm:'am',purpose:DEF_PURPOSE,form:'',plans:[],reps:[],appDate:today(),repDate:today(),daysManual:false,c1:true,safe:true},keep);
+  Object.keys(d).forEach(k=>delete d[k]);Object.assign(d,{type:'day',ampm:'am',purpose:DEF_PURPOSE,form:'',plans:[],reps:[],appDate:today(),repDate:today(),daysManual:false,cumManual:false,c1:true,safe:true},keep);
   photos.length=0;loadSigs();
   curId=null;dirty=false;save();showView('editor');fill();lockId(true);modeUI();autoDays();buildDays();drawTerms();setTab('app');curInfo();cumRef();$('#revMsg').textContent='';
 }
 const periodLabel=()=>d.type==='half'?`${d.hdate} 반일(${d.ampm==='am'?'오전':'오후'})`:`${d.start} ~ ${d.end||d.start}`;
-function cumRef(){ // 보관함의 다른 신청서 일수 (참고용)
+const itemDays=x=>{if(x.days!==undefined&&x.days!==''&&!isNaN(+x.days))return +x.days;const p=String(x.period||'');if(/반일/.test(p))return 0.5;
+  const m=p.match(/(\d{4}-\d{2}-\d{2})\s*~\s*(\d{4}-\d{2}-\d{2})/);if(!m)return 0;let n=0;for(let t=pd(m[1]);t<=pd(m[2]);t.setDate(t.getDate()+1))if(school(t))n++;return n};
+const BASECUM={}; // 승인된 신청서의 '금회까지 누적' 값 캐시
+let CUMINFO=null;
+async function autoCum(){ // 승인된 신청서가 있으면 그 누적값 + 그 뒤 신청분 + 이번 신청일수
+  if(TEDIT)return;
+  const cs=d.type==='half'?d.hdate:d.start;CUMINFO=null;
+  if(!cs){cumRef();return}
+  const apps=lastList.filter(x=>String(x.id).startsWith('app-')&&x.status!=='작성 중'&&x.id!==curId&&startOf(x.id)<cs);
+  const base=apps.filter(x=>x.status==='승인').sort((a,b)=>startOf(b.id).localeCompare(startOf(a.id)))[0];
+  if(!base){cumRef();return}
+  if(BASECUM[base.id]===undefined){try{const j=await api({action:'mine',...who(),id:base.id});BASECUM[base.id]=parseFloat(j.data&&j.data.cum)}catch(e){BASECUM[base.id]=NaN}}
+  const b0=BASECUM[base.id];if(isNaN(b0)){cumRef();return}
+  const mid=apps.filter(x=>x.id!==base.id&&startOf(x.id)>startOf(base.id)),midD=mid.reduce((a,x)=>a+itemDays(x),0),cur=parseFloat(d.days)||0;
+  const tot=Math.round((b0+midD+cur)*10)/10;
+  CUMINFO={base,b0,midD,mid,cur,tot};
+  if(!d.cumManual&&String(d.cum||'')!==String(tot)){d.cum=String(tot);$$('[data-k=cum]').forEach(o=>o.value=d.cum);save();render()}
+  cumRef();
+}
+function cumRef(){ // 보관함 신청서 일수 안내 + 자동 계산 설명
   const el=$('#cumRef');if(!el)return;
-  const cnt=x=>{if(x.days!==undefined&&x.days!==''&&!isNaN(+x.days))return +x.days;const p=String(x.period||'');if(/반일/.test(p))return 0.5;
-    const m=p.match(/(\d{4}-\d{2}-\d{2})\s*~\s*(\d{4}-\d{2}-\d{2})/);if(!m)return 0;let n=0;for(let t=pd(m[1]);t<=pd(m[2]);t.setDate(t.getDate()+1))if(school(t))n++;return n};
-  const curStart=curId?startOf(curId):'';
+  const cs=d.type==='half'?d.hdate:d.start,curStart=curId?startOf(curId):'';
   const L=lastList.filter(x=>String(x.id).startsWith('app-')&&x.status!=='작성 중'&&x.id!==curId&&startOf(x.id)!==curStart).sort((a,b)=>startOf(a.id).localeCompare(startOf(b.id)));
   if(!L.length){el.hidden=true;return}
-  const tot=L.reduce((a,x)=>a+cnt(x),0);
-  const lab=x=>{const p=String(x.period||''),m=p.match(/(\d{4}-\d{2}-\d{2})\s*~\s*(\d{4}-\d{2}-\d{2})/);return (m?`${md2(m[1])}~${md2(m[2])}`:md2(startOf(x.id))+' 반일')+` ${cnt(x)}일`+(x.status==='승인'?'':` (${x.status})`)};
-  el.innerHTML=`📂 <b>보관함 참고</b>: 이 앱으로 낸 다른 신청서 ${L.length}건 · 합계 <b>${tot}일</b><br><span style="font-size:.92em">${L.map(lab).map(esc).join(', ')}</span><br><span style="font-size:.88em;color:#6b7a72">※ 이 앱을 쓰기 전에 사용한 기간은 빠져 있어요. 누적일수는 직접 확인해 적어 주세요.</span>`;
-  el.hidden=false;
+  const lab=x=>{const p=String(x.period||''),m=p.match(/(\d{4}-\d{2}-\d{2})\s*~\s*(\d{4}-\d{2}-\d{2})/);return (m?`${md2(m[1])}~${md2(m[2])}`:md2(startOf(x.id))+' 반일')+` ${itemDays(x)}일`+(x.status==='승인'?'':` (${x.status})`)};
+  let h=`📂 <b>보관함</b>: 이 앱으로 낸 다른 신청서 ${L.length}건 — <span style="font-size:.92em">${L.map(lab).map(esc).join(', ')}</span>`;
+  const I=CUMINFO;
+  if(I){const bp=String(I.base.period||'').match(/(\d{4}-\d{2}-\d{2})\s*~\s*(\d{4}-\d{2}-\d{2})/),bl=bp?`${md2(bp[1])}~${md2(bp[2])}`:md2(startOf(I.base.id));
+    const f=`승인된 신청서(${bl})의 누적 <b>${I.b0}일</b>${I.midD?` + 그 뒤 신청 ${I.midD}일`:''} + 이번 ${I.cur}일 = <b>${I.tot}일</b>`;
+    h+=d.cumManual&&String(d.cum)!==String(I.tot)?`<br>✏️ 직접 입력한 값이에요. 자동 계산은 ${f} <button type="button" class="btn s" id="cumAuto">자동 계산으로 되돌리기</button>`
+      :`<br>🔄 <b>자동 계산됨</b>: ${f}<br><span style="font-size:.88em;color:#6b7a72">다르면 칸에 직접 고쳐 쓰면 돼요.</span>`}
+  else h+=`<br><span style="font-size:.88em;color:#6b7a72">※ 승인된 신청서가 생기면 다음부터 누적일수가 자동으로 채워져요. 지금은 이 앱 이전 사용분까지 직접 확인해 적어 주세요.</span>`;
+  el.innerHTML=h;el.hidden=false;
+  const bt=$('#cumAuto');if(bt)bt.onclick=()=>{d.cumManual=false;autoCum()};
 }
 document.addEventListener('click',e=>{const b=e.target.closest('[data-rel]');if(!b)return;e.preventDefault();
   const el=document.querySelector(`[data-k="${b.dataset.rel}"]`);el.value=b.textContent;el.dispatchEvent(new Event('input',{bubbles:true}));relChips()});
@@ -985,7 +1009,7 @@ function fieldName(k){
   if(N[k])return N[k];const el=document.querySelector(`[data-k="${k}"]`),l=el&&el.closest('label');return l?(l.childNodes[0].textContent||k).trim():k}
 function fv(v){if(v===true)return '체크';if(v===false)return '체크 안 함';const t=String(v??'').replace(/\s+/g,' ').trim();return t?`"${t.length>40?t.slice(0,40)+'…':t}"`:'(빈칸)'}
 function teditChanges(){
-  const o=TEDIT.orig||{},out=[],skip=/^(_|daysManual|plans|reps|grade|cls|num|name)$/;
+  const o=TEDIT.orig||{},out=[],skip=/^(_|daysManual|cumManual|plans|reps|grade|cls|num|name)$/;
   new Set([...Object.keys(o),...Object.keys(d)]).forEach(k=>{if(skip.test(k))return;const a=o[k]??'',b=d[k]??'';if(JSON.stringify(a)!==JSON.stringify(b)&&!(a===''&&b===false||a===false&&b===''))out.push(`${fieldName(k)}: ${fv(a)} → ${fv(b)}`)});
   ['plans','reps'].forEach(k=>{const A=o[k]||[],B=d[k]||[];for(let i=0;i<Math.max(A.length,B.length);i++)if((A[i]||'')!==(B[i]||''))out.push(`${i+1}일차 ${k==='plans'?'활동 계획':'결과 내용'}: ${fv(A[i]||'')} → ${fv(B[i]||'')}`)});
   [0,1,2,3,4].forEach(i=>{if((TEDIT.ph[i]||'')!==(photos[i]||''))out.push(`${i+1}일차 사진: ${photos[i]?'바꿈':'뺌'}`)});
