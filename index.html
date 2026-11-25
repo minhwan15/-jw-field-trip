@@ -141,6 +141,7 @@ input[readonly]{background:light-dark(#f0f3f1,#1a201d);color:var(--mute)}
 #revMsg{font-size:14px;margin-top:8px;font-weight:500}
 .sigtip{font-style:normal;font-size:12px;font-weight:700;color:light-dark(#c5221f,#ff8a80);margin-left:4px}
 .tedit [data-sig]{display:none}.tedit #actRow #reset{display:none}
+.lrow .cm.ed{background:light-dark(#fff6e0,#3a3018);border-left-color:#e0a100}.lrow .cm.ed span{font-weight:400;font-size:12px;color:var(--mute)}
 .pwnote{margin:6px 0 14px;padding:10px 12px;border-radius:10px;border:2px solid #d93025;background:light-dark(#fdecea,#3a1513);color:light-dark(#c5221f,#ff8a80);font-size:14px;line-height:1.55;font-weight:500}.pwnote b{font-weight:800}
 .chips{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}.chips button{font:inherit;font-size:13px;padding:4px 9px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}.chips button.on{background:var(--g);color:#fff;border-color:var(--g)}
 .meter{display:flex;align-items:center;gap:8px;font-size:13px;color:#c0682a;margin:4px 0 2px;font-weight:500}.meter b{font-size:15px}
@@ -773,7 +774,7 @@ function drawLocker(){
     const p=String(base.period||'');const m=p.match(/(\d{4}-\d{2}-\d{2})\s*~\s*(\d{4}-\d{2}-\d{2})/);
     const title=m?`${md2(m[1])} ~ ${md2(m[2])}`:md2(k)+(/반일/.test(p)?' 반일':'');
     const img=x=>x&&x.status==='승인'?`<button class="btn s p" data-img="${esc(x.id)}">🖼 이미지 저장</button>`:x&&x.status!=='작성 중'?'<span class="gsub" style="margin:0">승인 후 이미지 저장</span>':'';
-    const row=(lab,x,btns)=>`<div class="lrow"><b class="k">${lab}</b>${x?BADGE(x.status):'<span class="badge" style="background:#b8c2bd">아직 없음</span>'}<span class="sp"></span>${img(x)}${btns}${x&&x.comment&&x.status==='보완 요청'?`<div class="cm"><b>보완 사항</b>\n${esc(x.comment)}</div>`:''}</div>`;
+    const row=(lab,x,btns)=>`<div class="lrow"><b class="k">${lab}</b>${x?BADGE(x.status):'<span class="badge" style="background:#b8c2bd">아직 없음</span>'}<span class="sp"></span>${img(x)}${btns}${x&&x.comment&&x.status==='보완 요청'?`<div class="cm"><b>보완 사항</b>\n${esc(x.comment)}</div>`:''}${x&&x.edits?`<div class="cm ed"><b>✏️ 담임 선생님이 고친 부분</b> <span>다음엔 같은 실수가 없도록 확인해 두세요.</span>\n${esc(x.edits)}</div>`:''}</div>`;
     return `<div class="lcard"><h3>${esc(title)}</h3><div class="lsub">${esc(base.dest||'')}${base.at?` · 최근 저장 ${esc(base.at)}`:''}</div>
       ${row('신청서',app,app?`<button class="btn s" data-open="${esc(app.id)}">열기</button>`:'')}
       ${row('결과보고서',rep,rep?`<button class="btn s" data-open="${esc(rep.id)}">열기</button>`:app&&app.status!=='작성 중'?`<button class="btn s p" data-asrep="${esc(app.id)}">결과보고서 쓰기</button>`:app?'<span class="gsub" style="margin:0">신청서 검토 요청 후 쓸 수 있어요</span>':'')}</div>`}).join('');
@@ -927,7 +928,7 @@ async function teacherEdit(){
     const j=await api({action:'tget',...TEDIT.cred,id:TEDIT.id,assets:1,nopdf:1});
     if(!j.assets){$('#whoName').textContent='✏️ 담임 수정 모드 · 수정 불가(예전 제출본)';modal('<h3>이 서류는 여기서 고칠 수 없어요</h3><p>예전 방식으로 제출되어 서명·사진이 따로 저장되어 있지 않아요. 고치면 서명·사진이 빠지니, 학생에게 <b>보완 요청</b>을 보내 주세요.</p>',[{label:'검토 화면으로',p:true,fn:()=>location.href='teacher.html'}]);return}
     const src={...j.data};delete src._sig;delete src._ph;
-    Object.keys(d).forEach(k=>delete d[k]);Object.assign(d,{plans:[],reps:[]},src);
+    Object.keys(d).forEach(k=>delete d[k]);Object.assign(d,{plans:[],reps:[]},src);TEDIT.orig=JSON.parse(JSON.stringify(d));TEDIT.ph=[0,1,2,3,4].map(i=>photos[i]||'');
     Object.keys(sig).forEach(k=>{sig[k]=(j.assets.sig||{})[k]||'';sigRaw[k]=''});
     photos.length=0;(j.assets.photos||[]).forEach((p,i)=>photos[i]=p||'');
     const it=j.item;tab=TEDIT.id.startsWith('rep-')?'rep':'app';
@@ -940,14 +941,27 @@ async function teacherEdit(){
     $('#curInfo').innerHTML='서명은 학생·보호자가 한 그대로 들어가요. 내용만 고친 뒤 <b>수정 내용 저장</b>을 누르세요. 상태(승인·대기)는 바뀌지 않아요.';
   }catch(e){$('#whoName').textContent='❌ '+e.message}
 }
+function fieldName(k){
+  const N={type:'사용 단위',start:'시작일',end:'종료일',hdate:'반일 날짜',ampm:'오전/오후',purpose:'목적',form:'학습형태',days:'출석 인정 신청일수',cum:'누적 사용기간',dest:'목적지',lodge:'숙박장소',gName:'보호자명',gRel:'보호자 관계',gPhone:'보호자 휴대폰',lName:'인솔자명',lRel:'인솔자 관계',lPhone:'인솔자 휴대폰',title:'제목',comp:'동반자',appDate:'신청일',repDate:'제출일',c1:'확인 체크 1',c2:'확인 체크 2',c3:'확인 체크 3',safe:'안전 동의',phone:'학생 휴대폰'};
+  if(N[k])return N[k];const el=document.querySelector(`[data-k="${k}"]`),l=el&&el.closest('label');return l?(l.childNodes[0].textContent||k).trim():k}
+function fv(v){if(v===true)return '체크';if(v===false)return '체크 안 함';const t=String(v??'').replace(/\s+/g,' ').trim();return t?`"${t.length>40?t.slice(0,40)+'…':t}"`:'(빈칸)'}
+function teditChanges(){
+  const o=TEDIT.orig||{},out=[],skip=/^(_|daysManual|plans|reps|grade|cls|num|name)$/;
+  new Set([...Object.keys(o),...Object.keys(d)]).forEach(k=>{if(skip.test(k))return;const a=o[k]??'',b=d[k]??'';if(JSON.stringify(a)!==JSON.stringify(b)&&!(a===''&&b===false||a===false&&b===''))out.push(`${fieldName(k)}: ${fv(a)} → ${fv(b)}`)});
+  ['plans','reps'].forEach(k=>{const A=o[k]||[],B=d[k]||[];for(let i=0;i<Math.max(A.length,B.length);i++)if((A[i]||'')!==(B[i]||''))out.push(`${i+1}일차 ${k==='plans'?'활동 계획':'결과 내용'}: ${fv(A[i]||'')} → ${fv(B[i]||'')}`)});
+  [0,1,2,3,4].forEach(i=>{if((TEDIT.ph[i]||'')!==(photos[i]||''))out.push(`${i+1}일차 사진: ${photos[i]?'바꿈':'뺌'}`)});
+  return out;
+}
 async function doTEdit(){
+  const changes=teditChanges();
+  if(!changes.length){modal('<h3>바뀐 내용이 없어요</h3><p>고친 곳이 없어서 저장하지 않았어요.</p>',[{label:'확인',p:true}]);return}
   const s=pd(d.type==='half'?d.hdate:d.start);
   modal('<h3><span class="spin"></span>수정 내용 저장 중</h3><p style="margin:0">서류를 다시 만들어 저장하고 있어요.</p>',[],true);
   try{
     const pdf=await blob64(await makePdf());
-    const j=await api({action:'tedit',...TEDIT.cred,id:TEDIT.id,period:periodLabel(),dest:d.dest,data:{...d,_sig:Object.fromEntries(Object.keys(sig).map(k=>[k,!!sig[k]])),_ph:[0,1,2,3,4].map(i=>!!photos[i])},pdf});
+    const j=await api({action:'tedit',...TEDIT.cred,id:TEDIT.id,changes,period:periodLabel(),dest:d.dest,data:{...d,_sig:Object.fromEntries(Object.keys(sig).map(k=>[k,!!sig[k]])),_ph:[0,1,2,3,4].map(i=>!!photos[i])},pdf});
     const sy=j.sync&&!j.sync.off?(j.sync.ok?' · 쉬운출결에도 다시 반영했어요':' · ⚠️ 쉬운출결 반영 실패: '+j.sync.msg):'';
-    try{sessionStorage.setItem('jw-tmsg','✏️ 내용을 고쳐 저장했어요'+sy)}catch(e){}
+    try{sessionStorage.setItem('jw-tmsg','✏️ 내용을 고쳐 저장했어요 (학생 보관함에 고친 부분이 표시돼요)'+sy+'\n'+changes.map(x=>'· '+x).join('\n'))}catch(e){}
     location.href='teacher.html?open='+encodeURIComponent(TEDIT.id);
   }catch(e){modal(`<h3>저장하지 못했어요</h3><p>${esc(e.message)}</p>`,[{label:'확인',p:true}])}
 }

@@ -15,7 +15,7 @@
  * 코드를 고친 뒤에는 배포 → 배포 관리 → 수정(연필) → 버전: 새 버전 → 배포 (URL은 그대로 유지)
  */
 const SHEET = '신청', CONF = '설정', FOLDER_NAME = '체험학습_검토_PDF';
-const HEAD = ['ID', '구분', '학년', '반', '번호', '이름', '기간', '목적지', '상태', '보완사항', '요청시각', '검토시각', '검토자', '요청횟수', 'PIN', 'PDF파일ID', '데이터', '기록함', '자산ID'];
+const HEAD = ['ID', '구분', '학년', '반', '번호', '이름', '기간', '목적지', '상태', '보완사항', '요청시각', '검토시각', '검토자', '요청횟수', 'PIN', 'PDF파일ID', '데이터', '기록함', '자산ID', '수정내역'];
 const C = {}; HEAD.forEach((h, i) => C[h] = i);
 const DOCNAME = { app: '신청서', rep: '결과보고서' };
 
@@ -191,7 +191,7 @@ function status_(b) {
 function txt_(x) { return x instanceof Date ? Utilities.formatDate(x, 'Asia/Seoul', 'yyyy-MM-dd HH:mm') : String(x == null ? '' : x); }
 function pub_(r) {
   return { id: r[C['ID']], doc: r[C['구분']], grade: r[C['학년']], cls: r[C['반']], num: r[C['번호']], name: r[C['이름']], period: r[C['기간']], dest: r[C['목적지']],
-    status: r[C['상태']], comment: r[C['보완사항']], at: txt_(r[C['요청시각']]), reviewedAt: txt_(r[C['검토시각']]), count: r[C['요청횟수']], days: days_(r) };
+    status: r[C['상태']], comment: r[C['보완사항']], at: txt_(r[C['요청시각']]), reviewedAt: txt_(r[C['검토시각']]), count: r[C['요청횟수']], days: days_(r), edits: String(r[C['수정내역']] || '') };
 }
 function days_(r) { try { return String(JSON.parse(String(r[C['데이터']] || '{}')).days || ''); } catch (e) { return ''; } }
 
@@ -253,6 +253,13 @@ function tedit_(b) { // 담임이 학생 서류 내용을 직접 고쳐 저장(�
   f.sh.getRange(f.i + 1, C['기간'] + 1, 1, 2).setValues([["'" + str_(b.period, 60), "'" + str_(b.dest, 100)]]);
   f.sh.getRange(f.i + 1, C['PDF파일ID'] + 1, 1, 2).setValues([["'" + file.getId(), data]]);
   f.sh.getRange(f.i + 1, C['검토자'] + 1).setValue("'" + t.label + ' (내용 수정 ' + String(now_()).replace(/^'/, '') + ')');
+  const ch = (Array.isArray(b.changes) ? b.changes : []).slice(0, 30).map(x => '· ' + str_(x, 300)).join('\n');
+  if (ch) {
+    const hd = f.sh.getRange(1, C['수정내역'] + 1);
+    if (hd.getValue() !== '수정내역') hd.setValue('수정내역');
+    const prev = String(r[C['수정내역']] || '');
+    f.sh.getRange(f.i + 1, C['수정내역'] + 1).setValue("'" + ('[' + String(now_()).replace(/^'/, '') + ' 담임 수정]\n' + ch + (prev ? '\n\n' + prev : '')).slice(0, 4000));
+  }
   let sync = null;
   if (r[C['상태']] === '승인') {
     const nr = f.sh.getRange(f.i + 1, 1, 1, HEAD.length).getValues()[0];
