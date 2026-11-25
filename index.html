@@ -951,7 +951,8 @@ async function doTEdit(){
     location.href='teacher.html?open='+encodeURIComponent(TEDIT.id);
   }catch(e){modal(`<h3>저장하지 못했어요</h3><p>${esc(e.message)}</p>`,[{label:'확인',p:true}])}
 }
-if(TEDIT)teacherEdit();else if(SES)enter(SES);else{$('#gate').hidden=false;if(d.name){$('#sname').value=d.name;$('#sc').value=d.cls||'';$('#sn').value=d.num||'';$('#sphone').value=d.phone||'';$('#sg').value=d.grade||'3'}}
+const TSES=(()=>{try{return JSON.parse(localStorage.getItem('jw-t')||'null')}catch(e){return null}})();
+if(TEDIT)teacherEdit();else if(SES)enter(SES);else if(TSES&&!/[?&]gate/.test(location.search))location.replace('teacher.html');else{$('#gate').hidden=false;if(d.name){$('#sname').value=d.name;$('#sc').value=d.cls||'';$('#sn').value=d.num||'';$('#sphone').value=d.phone||'';$('#sg').value=d.grade||'3'}}
 }
 </script>
 </body>
