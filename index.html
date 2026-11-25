@@ -405,7 +405,7 @@ $('#terms').addEventListener('change',e=>{
 /* 날짜별 계획/보고 입력칸 */
 function buildDays(){
   const days=rows(),n=nRows();
-  const PLAN_EX=['예) 전주 한옥마을 탐방 후 전통 음식(비빔밥) 만들기 체험','예) 할머니 댁 방문, 김장 돕기와 집안 어른께 옛날이야기 듣기','예) 국립중앙박물관 견학, 관심 있는 시대 유물 정리하기','예) 제주 오름 트레킹과 해녀박물관에서 지역 생활 문화 알아보기','예) 진학 희망 대학 캠퍼스 투어 후 학과 안내 자료 정리하기'];
+  const PLAN_EX=['예) 전주 한옥마을 탐방 후 전통 음식(비빔밥) 만들기 체험','예) 조부모님 댁 방문, 김장 일손 돕기와 지역 전통시장 둘러보기','예) 국립중앙박물관 견학, 관심 있는 시대 유물 정리하기','예) 제주 오름 트레킹과 해녀박물관에서 지역 생활 문화 알아보기','예) 진학 희망 대학 캠퍼스 투어 후 학과 안내 자료 정리하기'];
   $('#plans').innerHTML=Array.from({length:n},(_,i)=>`<div class="day"><b>${i+1}일차 ${days[i]?`· ${md(days[i])}(${WD[days[i].getDay()]})`:''}</b><textarea data-plan="${i}" rows="2" placeholder="${PLAN_EX[i%PLAN_EX.length]}"></textarea></div>`).join('');
   $('#reps').innerHTML=Array.from({length:n},(_,i)=>`<div class="day"><b>${i+1}일차 ${days[i]?`· ${md(days[i])}(${WD[days[i].getDay()]})`:''}</b><textarea data-rep="${i}" rows="6" placeholder="느낀 점, 배운 점 — 아래 %가 90% 이상 되게 (이 입력칸으로는 약 7~8줄)"></textarea><div class="meter" data-meter="${i}"></div>
     <div class="photo"><img alt="" ${photos[i]?`src="${photos[i]}"`:'hidden'}><input type="file" accept="image/*" data-ph="${i}"><button class="btn s" type="button" data-phx="${i}" ${photos[i]?'':'hidden'}>삭제</button></div></div>`).join('');
