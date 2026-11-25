@@ -142,6 +142,8 @@ input[readonly]{background:light-dark(#f0f3f1,#1a201d);color:var(--mute)}
 .sigtip{font-style:normal;font-size:12px;font-weight:700;color:light-dark(#c5221f,#ff8a80);margin-left:4px}
 .tedit [data-sig]{display:none}.tedit #actRow #reset{display:none}
 .lrow .cm.ed{background:light-dark(#fff6e0,#3a3018);border-left-color:#e0a100}.lrow .cm.ed span{font-weight:400;font-size:12px;color:var(--mute)}
+.psel{width:100%;margin:0 0 6px;font-size:14px;padding:7px 8px;border-radius:8px;border:1px dashed var(--line);background:var(--card);color:var(--mute)}
+.pdup{color:var(--warn);font-size:13px;font-weight:700;margin-top:4px}
 .pwnote{margin:6px 0 14px;padding:10px 12px;border-radius:10px;border:2px solid #d93025;background:light-dark(#fdecea,#3a1513);color:light-dark(#c5221f,#ff8a80);font-size:14px;line-height:1.55;font-weight:500}.pwnote b{font-weight:800}
 .chips{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}.chips button{font:inherit;font-size:13px;padding:4px 9px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}.chips button.on{background:var(--g);color:#fff;border-color:var(--g)}
 .meter{display:flex;align-items:center;gap:8px;font-size:13px;color:#c0682a;margin:4px 0 2px;font-weight:500}.meter b{font-size:15px}
@@ -372,7 +374,7 @@ document.addEventListener('input',e=>{
   pendingAct=null;
   if(el.name==='type'){d.type=el.value;d.daysManual=false}
   else if(el.name==='form')d.form=el.value;
-  else if(el.dataset.plan!=null)d.plans[+el.dataset.plan]=el.value;
+  else if(el.dataset.plan!=null){d.plans[+el.dataset.plan]=el.value;planSync()}
   else if(el.dataset.rep!=null){d.reps[+el.dataset.rep]=el.value;repMeter(+el.dataset.rep)}
   else if(k){
     if(el.classList.contains('tel')){el.value=telFmt(el.value)}
@@ -411,10 +413,10 @@ $('#terms').addEventListener('change',e=>{
 function buildDays(){
   const days=rows(),n=nRows();
   const PLAN_EX=['예) 전주 한옥마을 탐방 후 전통 음식(비빔밥) 만들기 체험','예) 조부모님 댁 방문, 김장 일손 돕기와 지역 전통시장 둘러보기','예) 국립중앙박물관 견학, 관심 있는 시대 유물 정리하기','예) 제주 오름 트레킹과 해녀박물관에서 지역 생활 문화 알아보기','예) 진학 희망 대학 캠퍼스 투어 후 학과 안내 자료 정리하기'];
-  $('#plans').innerHTML=Array.from({length:n},(_,i)=>`<div class="day"><b>${i+1}일차 ${days[i]?`· ${md(days[i])}(${WD[days[i].getDay()]})`:''}</b><textarea data-plan="${i}" rows="2" placeholder="${PLAN_EX[i%PLAN_EX.length]}"></textarea></div>`).join('');
+  $('#plans').innerHTML=Array.from({length:n},(_,i)=>`<div class="day"><b>${i+1}일차 ${days[i]?`· ${md(days[i])}(${WD[days[i].getDay()]})`:''}</b><select class="psel" data-psel="${i}"><option value="">📋 추천 일정에서 고르기 (직접 써도 돼요)</option>${PLAN_SUG.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('')}</select><textarea data-plan="${i}" rows="2" placeholder="${PLAN_EX[i%PLAN_EX.length]}"></textarea><div class="pdup" data-pdup="${i}" hidden>⚠️ 다른 날과 같은 일정이에요. 날마다 다르게 써 주세요.</div></div>`).join('');
   $('#reps').innerHTML=Array.from({length:n},(_,i)=>`<div class="day"><b>${i+1}일차 ${days[i]?`· ${md(days[i])}(${WD[days[i].getDay()]})`:''}</b><textarea data-rep="${i}" rows="6" placeholder="느낀 점, 배운 점 — 아래 %가 90% 이상 되게 (이 입력칸으로는 약 7~8줄)"></textarea><div class="meter" data-meter="${i}"></div>
     <div class="photo"><img alt="" ${photos[i]?`src="${photos[i]}"`:'hidden'}><input type="file" accept="image/*" data-ph="${i}"><button class="btn s" type="button" data-phx="${i}" ${photos[i]?'':'hidden'}>삭제</button></div></div>`).join('');
-  $$('[data-plan]').forEach(t=>t.value=d.plans[+t.dataset.plan]||'');
+  $$('[data-plan]').forEach(t=>t.value=d.plans[+t.dataset.plan]||'');planSync();
   $$('[data-rep]').forEach(t=>{t.value=d.reps[+t.dataset.rep]||'';repMeter(+t.dataset.rep)});
 }
 document.addEventListener('change',async e=>{
@@ -625,6 +627,7 @@ function check(){
     if(t&&!d.c3)E('반일 단위: 4시간 미만 확인에 체크하세요',K('c3'));
     if(!d.purpose)E('목적을 입력하세요',K('purpose'));
     days.forEach((x,i)=>{if(i<nRows()&&!(d.plans[i]||'').trim())E(`${lbl(i)} 학습계획이 비어 있어요`,`[data-plan="${i}"]`)});
+    days.forEach((x,i)=>{const v=normP(d.plans[i]);if(i<nRows()&&v&&days.some((y,j)=>j<i&&normP(d.plans[j])===v))E(`${lbl(i)} 학습계획이 다른 날과 같아요`,`[data-plan="${i}"]`)});
     if(days.length>nRows())W(`수업일이 ${days.length}일이라 양식의 5칸을 넘어요. 담임 선생님과 상의하세요`,'#plans');
     if(cal.length>=5&&!d.safe)E('5일 이상 연속: 학생안전 동의에 체크하세요',K('safe'));
     const ad=pd(d.appDate),s=pd(t?d.hdate:d.start);
@@ -832,6 +835,16 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-rel]');if(
   const el=document.querySelector(`[data-k="${b.dataset.rel}"]`);el.value=b.textContent;el.dispatchEvent(new Event('input',{bubbles:true}));relChips()});
 function relChips(){$$('[data-rel]').forEach(b=>b.classList.toggle('on',(d[b.dataset.rel]||'')===b.textContent))}
 document.addEventListener('input',e=>{if(/Rel$/.test(e.target.dataset?.k||''))relChips()});
+const PLAN_SUG=['오이도 해안 일대 탐방 및 서해안 지형·생태 관찰','오이도 선사유적 탐방 및 신석기 생활문화 체험','거북섬 해양생태과학관 견학 및 시화호 주변 산책','시화방조제·달전망대 탐방 및 조력발전 원리 알아보기','시흥 갯골생태공원 탐방 및 염전 역사 알아보기','옥구공원 산책 및 시흥 지역 자연환경 둘러보기','배곧 해안 산책로 탐방 및 철새·갯벌 생태 관찰','서울대 시흥캠퍼스 방문 및 진로·진학 탐색','한국공학대학교 캠퍼스 탐방 및 희망 학과 진로 탐색','시화산업단지 일대 견학 및 지역 산업 조사','오이도 전통시장 방문 및 지역 먹거리 문화 체험','월곶포구 탐방 및 포구 마을의 변화 알아보기','물왕저수지 둘레길 걷기 및 가족과 자연 산책','시흥 일대 공원 탐방 및 도시 녹지 조성 알아보기','서해 낙조 명소 탐방 및 가족 사진 기록 남기기','시흥 지역 박물관·전시관 관람 및 향토 역사 알아보기','시흥 신도시 탐방 및 도시 계획·변화 조사','시흥 해안 생태 탐방 및 환경 보전 활동(쓰레기 줍기)','가족과 함께 시흥 지역 명소 탐방 및 체험 활동 정리','체험학습 활동 정리 및 결과보고서 작성 준비','시흥 해양 문화 공간 탐방 및 서해안 어업 문화 알아보기','오이도 함상전망대 견학 및 해양 안보 알아보기','오이도 생명의 나무 전망대 탐방 및 시화지구 간척 역사 알아보기','거북섬 마리나 탐방 및 해양레저 산업 알아보기','시화호 생태 탐방 및 수질 회복 과정 조사','배곧생명공원 탐방 및 생태 습지 관찰','시흥 정왕동 일대 둘러보기 및 다문화 거리 문화 체험','시흥 관곡지 일대 탐방 및 조선 시대 농업 역사 알아보기','시흥 연꽃테마파크 탐방 및 습지 식물 생태 알아보기','호조벌 들녘 탐방 및 간척 농지의 역사 알아보기','시흥 지역 도서관 방문 및 진로 관련 독서 활동','시흥 늠내길 걷기 및 지역 숲길 생태 관찰','시흥 전통시장 탐방 및 지역 경제 알아보기','시흥 해안 자전거길 라이딩 및 가족 체력 활동','시흥 지역 문화유산 탐방 및 향토 인물 알아보기'];
+const normP=v=>String(v||'').replace(/\s+/g,'');
+function planSync(){ // 이미 다른 날에 쓴 추천 일정은 고르지 못하게, 같은 일정이면 경고
+  const P=$$('[data-plan]').map(t=>normP(t.value));
+  $$('[data-psel]').forEach(sl=>{const i=+sl.dataset.psel;sl.value='';
+    [...sl.options].forEach(o=>{if(!o.value)return;const used=P.some((v,j)=>j!==i&&v===normP(o.value));o.disabled=used;o.textContent=(used?'✔ (다른 날 사용) ':'')+o.value});});
+  $$('[data-pdup]').forEach(el=>{const i=+el.dataset.pdup,v=P[i];const dup=!!v&&P.some((w,j)=>j!==i&&w===v);el.hidden=!dup;const t=document.querySelector(`[data-plan="${i}"]`);if(t)t.classList.toggle('bad',dup)});
+}
+document.addEventListener('change',e=>{const sl=e.target.closest&&e.target.closest('[data-psel]');if(!sl||!sl.value)return;
+  const t=document.querySelector(`[data-plan="${sl.dataset.psel}"]`);t.value=sl.value;t.dispatchEvent(new Event('input',{bubbles:true}));});
 const prevFor=()=>curId&&curId.startsWith(tab==='app'?'app-':'rep-')?curId:'';
 async function saveDraft(silent){
   const s=pd(d.type==='half'?d.hdate:d.start);
