@@ -265,7 +265,8 @@ input[readonly]{background:light-dark(#f0f3f1,#1a201d);color:var(--mute)}
   <section>
     <h2><b id="n4">4</b>학습형태 · 장소</h2>
     <div class="chips" id="forms"></div>
-    <div class="row"><label>목적지<input data-k="dest"></label><label>숙박장소 (숙박 시)<input data-k="lodge"></label></div>
+    <div class="row"><label>목적지<input data-k="dest"></label><label>숙박장소 (숙박 시)<input data-k="lodge" placeholder="예) 경주 ○○호텔 / 부산 해운대구 ○○로 12 (조부모님 댁)"></label></div>
+    <p class="hint">숙박하면 <b>업체명이나 주소까지 구체적으로</b> 적으세요. "호텔", "할머니 댁"처럼만 쓰면 안 돼요.</p>
   </section>
   <section>
     <h2><b id="n5">5</b>보호자 · 인솔자</h2>
@@ -614,6 +615,8 @@ function check(){
   if(!d.form)E('학습형태를 고르세요','#forms');
   if(!d.dest)E('목적지를 입력하세요',K('dest'));
   if(cal.length>1&&!d.lodge)W('1박 이상이면 숙박장소를 적어 주세요',K('lodge'));
+  {const L=String(d.lodge||'').trim(),G=/^(?:[가-힣]{1,4}\s*)?(호텔|펜션|리조트|모텔|숙소|민박|게스트하우스|캠핑장|글램핑|콘도|집|자택|본가|외가|친가|큰집|할머니\s*댁|할아버지\s*댁|조부모님?\s*댁|친척\s*[집댁]|이모\s*[집댁]|삼촌\s*[집댁]|고모\s*[집댁])$/;
+   if(L&&(L.replace(/\s/g,'').length<6||G.test(L)))E('숙박장소는 업체명이나 주소까지 구체적으로 적어 주세요 (예: 경주 ○○호텔)',K('lodge'))}
   if(!d.gName)E('보호자명을 입력하세요',K('gName'));
   if(!d.gRel)E('보호자 관계를 입력하세요',K('gRel'));
   if(!d.gPhone)E('보호자 휴대폰을 입력하세요',K('gPhone'));else if(!TEL.test(d.gPhone))E('보호자 휴대폰 번호 형식이 맞지 않아요',K('gPhone'));
