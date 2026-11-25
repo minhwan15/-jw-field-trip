@@ -139,6 +139,7 @@ input[readonly]{background:light-dark(#f0f3f1,#1a201d);color:var(--mute)}
 #mustNote{margin:0 0 10px;padding:10px 12px;border-radius:10px;background:light-dark(#fff4e8,#3a2a19);font-size:14px}
 #mustNote[hidden]{display:none}
 #revMsg{font-size:14px;margin-top:8px;font-weight:500}
+.pwnote{margin:6px 0 14px;padding:10px 12px;border-radius:10px;border:2px solid #d93025;background:light-dark(#fdecea,#3a1513);color:light-dark(#c5221f,#ff8a80);font-size:14px;line-height:1.55;font-weight:500}.pwnote b{font-weight:800}
 .chips{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}.chips button{font:inherit;font-size:13px;padding:4px 9px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}.chips button.on{background:var(--g);color:#fff;border-color:var(--g)}
 .meter{display:flex;align-items:center;gap:8px;font-size:13px;color:#c0682a;margin:4px 0 2px;font-weight:500}.meter b{font-size:15px}
 .meter.ok{color:#2e8b57}.meter.over{color:var(--warn)}
@@ -194,7 +195,7 @@ input[readonly]{background:light-dark(#f0f3f1,#1a201d);color:var(--mute)}
   <div class="gwrap">
     <form class="gcard" id="gStu" autocomplete="off">
       <h2>🎒 학생 로그인</h2>
-      <p class="gsub">처음이면 지금 정한 <b>비밀번호(숫자 4자리)</b>가 내 비밀번호가 돼요. 다음에 이어 쓰거나 다른 기기에서 불러올 때 필요하니 꼭 기억하세요.</p>
+      <p class="pwnote">⚠️ <b>처음 이용한다면</b> 지금 입력한 <b>비밀번호(숫자 4자리)</b>가 내 비밀번호로 정해져요.<br>다음에 이어 쓰거나 다른 기기에서 불러올 때 꼭 필요하니 <b>반드시 기억하세요!</b></p>
       <div class="ggrid">
         <label>학년<select id="sg"><option>1</option><option>2</option><option selected>3</option></select></label>
         <label>반<input id="sc" inputmode="numeric" maxlength="2" placeholder="8"></label>
