@@ -139,6 +139,7 @@ input[readonly]{background:light-dark(#f0f3f1,#1a201d);color:var(--mute)}
 #mustNote{margin:0 0 10px;padding:10px 12px;border-radius:10px;background:light-dark(#fff4e8,#3a2a19);font-size:14px}
 #mustNote[hidden]{display:none}
 #revMsg{font-size:14px;margin-top:8px;font-weight:500}
+.chips{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}.chips button{font:inherit;font-size:13px;padding:4px 9px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}.chips button.on{background:var(--g);color:#fff;border-color:var(--g)}
 .meter{display:flex;align-items:center;gap:8px;font-size:13px;color:#c0682a;margin:4px 0 2px;font-weight:500}.meter b{font-size:15px}
 .meter.ok{color:#2e8b57}.meter.over{color:var(--warn)}
 .mbar{flex:0 0 90px;height:7px;border-radius:4px;background:light-dark(#e3e8e5,#2a302c);overflow:hidden}.mbar i{display:block;height:100%;background:currentColor;border-radius:4px}
@@ -261,12 +262,11 @@ input[readonly]{background:light-dark(#f0f3f1,#1a201d);color:var(--mute)}
   </section>
   <section>
     <h2><b id="n5">5</b>보호자 · 인솔자</h2>
-    <div class="row"><label>보호자명<input data-k="gName"></label><label>관계<input data-k="gRel" list="rels"></label></div>
+    <div class="row"><label>보호자명<input data-k="gName"></label><label>관계<input data-k="gRel" autocomplete="off" placeholder="직접 입력"><span class="chips"><button type="button" data-rel="gRel">부</button><button type="button" data-rel="gRel">모</button><button type="button" data-rel="gRel">조부</button><button type="button" data-rel="gRel">조모</button></span></label></div>
     <div class="row"><label>보호자 휴대폰<input data-k="gPhone" class="tel" inputmode="tel"></label></div>
     <div style="margin-bottom:10px"><button class="btn s" id="copyG" type="button">보호자 정보를 인솔자로 복사</button></div>
-    <div class="row"><label>인솔자명<input data-k="lName"></label><label>관계<input data-k="lRel" list="rels"></label></div>
+    <div class="row"><label>인솔자명<input data-k="lName"></label><label>관계<input data-k="lRel" autocomplete="off" placeholder="직접 입력"><span class="chips"><button type="button" data-rel="lRel">부</button><button type="button" data-rel="lRel">모</button><button type="button" data-rel="lRel">조부</button><button type="button" data-rel="lRel">조모</button></span></label></div>
     <div class="row"><label>인솔자 휴대폰<input data-k="lPhone" class="tel" inputmode="tel"></label></div>
-    <datalist id="rels"><option value="부"><option value="모"><option value="조부"><option value="조모"></datalist>
   </section>
   <section class="app">
     <h2><b>6</b>목적 · 학습계획</h2>
@@ -358,7 +358,7 @@ $('#forms').innerHTML=FORMS.map(f=>`<label><input type="radio" name="form" value
 function fill(){
   $$('[data-k]').forEach(el=>{const v=d[el.dataset.k];if(el.type==='checkbox')el.checked=!!v;else if(v!=null)el.value=v;else if(el.tagName!=='SELECT')el.value=''});
   $$('[name=type]').forEach(r=>r.checked=r.value===d.type);
-  $$('[name=form]').forEach(r=>r.checked=r.value===d.form);
+  $$('[name=form]').forEach(r=>r.checked=r.value===d.form);relChips();
 }
 const telFmt=v=>{const n=v.replace(/\D/g,'').slice(0,11);return n.length<4?n:n.length<8?n.slice(0,3)+'-'+n.slice(3):n.slice(0,3)+'-'+n.slice(3,n.length-4)+'-'+n.slice(-4)};
 document.addEventListener('input',e=>{
@@ -813,6 +813,10 @@ function cumRef(){ // 보관함의 다른 신청서 일수 (참고용)
   el.innerHTML=`📂 <b>보관함 참고</b>: 이 앱으로 낸 다른 신청서 ${L.length}건 · 합계 <b>${tot}일</b><br><span style="font-size:.92em">${L.map(lab).map(esc).join(', ')}</span><br><span style="font-size:.88em;color:#6b7a72">※ 이 앱을 쓰기 전에 사용한 기간은 빠져 있어요. 누적일수는 직접 확인해 적어 주세요.</span>`;
   el.hidden=false;
 }
+document.addEventListener('click',e=>{const b=e.target.closest('[data-rel]');if(!b)return;e.preventDefault();
+  const el=document.querySelector(`[data-k="${b.dataset.rel}"]`);el.value=b.textContent;el.dispatchEvent(new Event('input',{bubbles:true}));relChips()});
+function relChips(){$$('[data-rel]').forEach(b=>b.classList.toggle('on',(d[b.dataset.rel]||'')===b.textContent))}
+document.addEventListener('input',e=>{if(/Rel$/.test(e.target.dataset?.k||''))relChips()});
 const prevFor=()=>curId&&curId.startsWith(tab==='app'?'app-':'rep-')?curId:'';
 async function saveDraft(silent){
   const s=pd(d.type==='half'?d.hdate:d.start);
