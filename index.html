@@ -888,7 +888,9 @@ function enter(sv){
   fill();lockId(true);modeUI();autoDays();buildDays();drawTerms();setTab('app');
   if(API){showLocker()}else showView('editor');
 }
-let SES=null;try{SES=JSON.parse(localStorage.getItem('jw-s')||sessionStorage.getItem('jw-s')||'null')}catch(e){}
+const ck={get:n=>{const m=document.cookie.match(new RegExp('(?:^|; )'+n+'=([^;]*)'));return m?decodeURIComponent(m[1]):''},set:(n,v)=>{document.cookie=`${n}=${encodeURIComponent(v)}; max-age=${v?31536000:0}; path=/; SameSite=Lax; Secure`}};
+let SES=null;try{SES=JSON.parse(localStorage.getItem('jw-s')||ck.get('jw_s')||sessionStorage.getItem('jw-s')||'null')}catch(e){}
+if(SES){try{localStorage.setItem('jw-s',JSON.stringify(SES))}catch(e){}ck.set('jw_s',JSON.stringify(SES))}
 $('#sc').addEventListener('input',e=>e.target.value=e.target.value.replace(/\D/g,''));
 $('#sn').addEventListener('input',e=>e.target.value=e.target.value.replace(/\D/g,''));
 $('#spin').addEventListener('input',e=>e.target.value=e.target.value.replace(/\D/g,'').slice(0,4));
@@ -904,7 +906,7 @@ $('#gStu').onsubmit=async e=>{
     try{await api({action:'status',grade:sv.grade,cls:sv.cls,num:sv.num,name:sv.name,phone:sv.phone,pin:sv.pin})}
     catch(err){m.style.color='';m.textContent=err.message+(/다릅니다/.test(err.message)?' (처음 검토 요청 때 정한 비밀번호를 입력하세요)':'');return}
     m.style.color='';m.textContent='';}
-  try{localStorage.setItem('jw-s',JSON.stringify(sv))}catch(err){}
+  try{localStorage.setItem('jw-s',JSON.stringify(sv))}catch(err){}ck.set('jw_s',JSON.stringify(sv));
   enter(sv);
 };
 $('#gTch').onsubmit=async e=>{
@@ -917,7 +919,7 @@ $('#gTch').onsubmit=async e=>{
   catch(err){m.style.color='';m.textContent=err.message}
 };
 $('#bLogout').onclick=()=>modal('<h3>로그아웃할까요?</h3><p>이 기기에 임시 저장된 작성 내용도 함께 지워요. 검토 요청을 보낸 신청은 다음에 로그인해서 다시 불러올 수 있어요.</p>',
-  [{label:'로그아웃',p:true,fn:()=>{try{sessionStorage.removeItem('jw-s');localStorage.removeItem('jw-s');localStorage.removeItem(KEY)}catch(e){}location.reload()}},{label:'취소'}]);
+  [{label:'로그아웃',p:true,fn:()=>{try{sessionStorage.removeItem('jw-s');localStorage.removeItem('jw-s');localStorage.removeItem(KEY)}catch(e){}ck.set('jw_s','');location.reload()}},{label:'취소'}]);
 async function teacherEdit(){
   $('#gate').hidden=true;$('#who').hidden=false;$('#bLocker').hidden=true;$('#bLogout').hidden=true;
   $('#whoName').textContent='담임 수정 모드 · 불러오는 중…';
