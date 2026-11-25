@@ -139,6 +139,7 @@ input[readonly]{background:light-dark(#f0f3f1,#1a201d);color:var(--mute)}
 #mustNote{margin:0 0 10px;padding:10px 12px;border-radius:10px;background:light-dark(#fff4e8,#3a2a19);font-size:14px}
 #mustNote[hidden]{display:none}
 #revMsg{font-size:14px;margin-top:8px;font-weight:500}
+.sigtip{font-style:normal;font-size:12px;font-weight:700;color:light-dark(#c5221f,#ff8a80);margin-left:4px}
 .pwnote{margin:6px 0 14px;padding:10px 12px;border-radius:10px;border:2px solid #d93025;background:light-dark(#fdecea,#3a1513);color:light-dark(#c5221f,#ff8a80);font-size:14px;line-height:1.55;font-weight:500}.pwnote b{font-weight:800}
 .chips{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}.chips button{font:inherit;font-size:13px;padding:4px 9px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}.chips button.on{background:var(--g);color:#fff;border-color:var(--g)}
 .meter{display:flex;align-items:center;gap:8px;font-size:13px;color:#c0682a;margin:4px 0 2px;font-weight:500}.meter b{font-size:15px}
@@ -428,18 +429,26 @@ function trimSig(cv){ // 서명 둘레 빈 여백을 잘라 (인) 위에 바로 
   const o=document.createElement('canvas');o.width=c-a+1;o.height=e-b+1;o.getContext('2d').drawImage(cv,a,b,o.width,o.height,0,0,o.width,o.height);return o.toDataURL('image/png');
 }
 const SIGN={appP:'보호자 서명',appS:'학생 서명',repP:'보호자 서명',repS:'학생 서명'};
+const SIGHINT={appP:'성함을 정자체로 또박또박',appS:'이름을 정자체로 또박또박',repP:'성함을 정자체로 또박또박',repS:'이름을 정자체로 또박또박'};
+const ROLE=k=>k.slice(-1); // P 보호자, S 학생 — 신청서·보고서 같은 서명 사용
+const sigKey=()=>`jw-sig-${d.grade||''}-${d.cls||''}-${d.num||''}-${d.name||''}`;
+const CVS={};
+function sigStore(){try{return JSON.parse(localStorage.getItem(sigKey())||'{}')}catch(e){return {}}}
+function sigPut(role,raw,trim){const st=sigStore();if(raw)st[role]={raw,trim};else delete st[role];try{localStorage.setItem(sigKey(),JSON.stringify(st))}catch(e){}}
+function paintSig(k){const c=CVS[k];if(!c)return;const {cv,ctx}=c;ctx.clearRect(0,0,cv.width,cv.height);if(sigRaw[k]&&cv.width){const im=new Image();im.onload=()=>{ctx.clearRect(0,0,cv.width,cv.height);ctx.drawImage(im,0,0,cv.width,cv.height)};im.src=sigRaw[k]}}
+function loadSigs(){const st=sigStore();Object.keys(SIGN).forEach(k=>{const v=st[ROLE(k)];sigRaw[k]=v?v.raw:'';sig[k]=v?v.trim:'';paintSig(k)})}
 $$('[data-sig]').forEach(box=>{
   const k=box.dataset.sig;
-  box.innerHTML=`<div class="sighead"><span>${SIGN[k]}</span><button class="btn s" type="button">지우기</button></div><canvas class="sig"></canvas>`;
-  const cv=box.querySelector('canvas'),ctx=cv.getContext('2d');let drawing=false,dirty=false;
+  box.innerHTML=`<div class="sighead"><span>${SIGN[k]} <em class="sigtip">✍️ ${SIGHINT[k]}</em></span><button class="btn s" type="button">지우기</button></div><canvas class="sig"></canvas>`;
+  const cv=box.querySelector('canvas'),ctx=cv.getContext('2d');let drawing=false,dirty=false;CVS[k]={cv,ctx};
   const size=()=>{const r=cv.getBoundingClientRect();if(!r.width)return;cv.width=r.width*2;cv.height=r.height*2;ctx.lineWidth=5;ctx.lineCap=ctx.lineJoin='round';ctx.strokeStyle='#000';if(sigRaw[k]){const im=new Image();im.onload=()=>ctx.drawImage(im,0,0,cv.width,cv.height);im.src=sigRaw[k]}};
   new ResizeObserver(size).observe(cv);
   const pt=e=>{const r=cv.getBoundingClientRect();return[(e.clientX-r.left)*2,(e.clientY-r.top)*2]};
   cv.addEventListener('pointerdown',e=>{drawing=true;dirty=true;cv.setPointerCapture(e.pointerId);ctx.beginPath();ctx.moveTo(...pt(e))});
   cv.addEventListener('pointermove',e=>{if(!drawing)return;ctx.lineTo(...pt(e));ctx.stroke()});
-  const end=()=>{if(!drawing)return;drawing=false;if(dirty){sigRaw[k]=cv.toDataURL('image/png');sig[k]=trimSig(cv)}render()};
+  const end=()=>{if(!drawing)return;drawing=false;if(dirty){const r=ROLE(k),raw=cv.toDataURL('image/png'),tr=trimSig(cv);sigPut(r,raw,tr);Object.keys(SIGN).filter(x=>ROLE(x)===r).forEach(x=>{sigRaw[x]=raw;sig[x]=tr;if(x!==k)paintSig(x)})}render()};
   cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
-  box.querySelector('button').onclick=()=>{ctx.clearRect(0,0,cv.width,cv.height);sig[k]='';sigRaw[k]='';dirty=false;render()};
+  box.querySelector('button').onclick=()=>{const r=ROLE(k);sigPut(r,'');Object.keys(SIGN).filter(x=>ROLE(x)===r).forEach(x=>{sig[x]='';sigRaw[x]='';paintSig(x)});dirty=false;render()};
 });
 
 /* ── 원본 양식(한글 PDF) 배경 + 같은 자리에 값 얹기 ── */
@@ -743,7 +752,7 @@ let curId=null,dirty=false,lastList=[];
 const BADGE=st=>`<span class="badge ${st==='승인'?'ok':st==='보완 요청'?'fix':st==='작성 중'?'draft':''}">${esc(st)}</span>`;
 const startOf=id=>String(id).slice(-10);
 const md2=s=>{const x=pd(s);return x?`${x.getMonth()+1}/${x.getDate()}(${WD[x.getDay()]})`:''};
-function showView(v){$('#locker').hidden=v!=='locker';$('#mainApp').hidden=v!=='editor';$('#tabs').hidden=v!=='editor';window.scrollTo(0,0)}
+function showView(v){$('#locker').hidden=v!=='locker';$('#mainApp').hidden=v!=='editor';$('#tabs').hidden=v!=='editor';window.scrollTo(0,0);if(v==='editor'){loadSigs();render()}}
 function curInfo(){const id=curId,doc=tab==='app'?'신청서':'결과보고서';$('#curInfo').innerHTML=id&&id.startsWith(tab==='app'?'app-':'rep-')?`지금 쓰는 서류: <b>${doc}</b> · 보관함에 저장됨`:`지금 쓰는 서류: <b>새 ${doc}</b> · 아직 보관함에 없음`;cumRef()}
 async function showLocker(){
   showView('locker');$('#lWho').textContent=$('#whoName').textContent;
@@ -773,9 +782,9 @@ async function openItem(id,asRep){
     const keep={grade:d.grade,cls:d.cls,num:d.num,name:d.name,phone:d.phone};
     Object.keys(d).forEach(k=>delete d[k]);Object.assign(d,{plans:[],reps:[]},src,keep);
     if(asRep){if(!d.repDate)d.repDate=today();}
-    Object.keys(sig).forEach(k=>sig[k]='');Object.keys(sigRaw).forEach(k=>sigRaw[k]='');photos.length=0;$$('[data-sig] canvas').forEach(c=>c.getContext('2d').clearRect(0,0,c.width,c.height));
+    photos.length=0;loadSigs();
     curId=asRep?null:id;dirty=false;save();showView('editor');fill();lockId(true);modeUI();buildDays();drawTerms();setTab(asRep||id.startsWith('rep-')?'rep':'app');curInfo();cumRef();$('#lMsg').textContent='';
-    $('#revMsg').textContent=asRep?'신청서의 기본 정보를 옮겨 왔어요. 결과보고서 내용·사진·서명을 채워 주세요.':'불러왔어요. 서명·사진은 다시 해 주세요.';$('#revMsg').style.color='#2e8b57';
+    $('#revMsg').textContent=asRep?'신청서의 기본 정보와 서명을 옮겨 왔어요. 결과보고서 내용·사진을 채워 주세요.':'불러왔어요. 서명은 그대로 남아 있어요. 사진만 다시 올려 주세요.';$('#revMsg').style.color='#2e8b57';
   }catch(e){$('#lMsg').textContent='❌ '+e.message}
 }
 /* 담임이 승인한 PDF(제출 당시 서명·사진 포함)를 페이지별 JPG로 저장 */
@@ -799,7 +808,7 @@ async function saveApproved(id,btn){
 function newApp(){
   const keep={grade:d.grade,cls:d.cls,num:d.num,name:d.name,phone:d.phone};
   Object.keys(d).forEach(k=>delete d[k]);Object.assign(d,{type:'day',ampm:'am',purpose:DEF_PURPOSE,form:'',plans:[],reps:[],appDate:today(),repDate:today(),daysManual:false,c1:true,safe:true},keep);
-  Object.keys(sig).forEach(k=>sig[k]='');Object.keys(sigRaw).forEach(k=>sigRaw[k]='');photos.length=0;$$('[data-sig] canvas').forEach(c=>c.getContext('2d').clearRect(0,0,c.width,c.height));
+  photos.length=0;loadSigs();
   curId=null;dirty=false;save();showView('editor');fill();lockId(true);modeUI();autoDays();buildDays();drawTerms();setTab('app');curInfo();cumRef();$('#revMsg').textContent='';
 }
 const periodLabel=()=>d.type==='half'?`${d.hdate} 반일(${d.ampm==='am'?'오전':'오후'})`:`${d.start} ~ ${d.end||d.start}`;
