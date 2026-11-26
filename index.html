@@ -330,6 +330,8 @@ input[readonly]{background:light-dark(#f0f3f1,#1a201d);color:var(--mute)}
 
 <script src="config.js"></script>
 <script src="spec.js"></script>
+<script>/* 카톡 안 브라우저면 기본 브라우저(크롬·삼성인터넷·사파리)로 자동 열기 */
+(function(){var u=navigator.userAgent||'';if(/KAKAOTALK/i.test(u)&&!/[?&]inapp=1/.test(location.search)){location.href='kakaotalk://web/openExternal?url='+encodeURIComponent(location.href)}})();</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
@@ -833,8 +835,15 @@ async function openItem(id,asRep){
 }
 /* 담임이 승인한 PDF(제출 당시 서명·사진 포함)를 페이지별 JPG로 저장 */
 function loadPdfJs(){return window.pdfjsLib?Promise.resolve():new Promise((ok,no)=>{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';sc.onload=()=>{pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';ok()};sc.onerror=()=>no(new Error('변환 도구를 불러오지 못했어요'));document.head.append(sc)})}
+const INAPP=/KAKAOTALK|NAVER\(inapp|Instagram|FBAN|FBAV|Line\/|DaumApps|everytimeApp|band/i.test(navigator.userAgent||'');
+function showImgs(L){ // 앱 안 브라우저(카톡 등)는 다운로드가 막혀서, 이미지를 띄워 길게 눌러 저장
+  const ov=document.createElement('div');ov.className='psheet';ov.style.alignItems='stretch';
+  ov.innerHTML=`<div class="pbox" style="max-height:100vh;height:100%;border-radius:0"><div class="phead"><b>길게 눌러 ‘이미지 저장’</b><button type="button" class="btn s" data-pclose>닫기</button></div>
+  <div class="plist" style="padding:10px;background:#888">${L.map(([u,n],i)=>`<p style="color:#fff;margin:6px 2px;font-size:13px">${i+1}. ${esc(n)}</p><img src="${u}" alt="${esc(n)}" style="width:100%;display:block;background:#fff;margin-bottom:10px">`).join('')}</div></div>`;
+  document.body.append(ov);ov.onclick=e=>{if(e.target.closest('[data-pclose]'))ov.remove()};
+}
 async function saveApproved(id,btn){
-  const old=btn.textContent;btn.disabled=true;btn.textContent='만드는 중…';
+  const imgs=[];const old=btn.textContent;btn.disabled=true;btn.textContent='만드는 중…';
   try{
     const [j]=await Promise.all([api({action:'mypdf',...who(),id}),loadPdfJs()]);
     const doc=await pdfjsLib.getDocument({data:Uint8Array.from(atob(j.pdf),c=>c.charCodeAt(0))}).promise;
@@ -843,8 +852,10 @@ async function saveApproved(id,btn){
       const page=await doc.getPage(i),vp=page.getViewport({scale:1666/page.getViewport({scale:1}).width}),c=document.createElement('canvas');c.width=vp.width;c.height=vp.height;
       const ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);await page.render({canvasContext:ctx,viewport:vp}).promise;
       const b=await new Promise(r=>c.toBlob(r,'image/jpeg',.92));if(i>1)await new Promise(r=>setTimeout(r,700));
-      dl(b,base+(doc.numPages>1?(j.item.doc==='결과보고서'?names[i-1]||'_'+i:'_'+i):'')+'.jpg');
+      const fn=base+(doc.numPages>1?(j.item.doc==='결과보고서'?names[i-1]||'_'+i:'_'+i):'')+'.jpg';
+      if(INAPP)imgs.push([c.toDataURL('image/jpeg',.92),fn]);else dl(b,fn);
     }
+    if(INAPP){showImgs(imgs);$('#lMsg').textContent='이미지를 길게 눌러 저장하세요. 안 되면 오른쪽 위 ⋮ → 다른 브라우저로 열기를 눌러 주세요.';return}
     $('#lMsg').textContent=`✅ ${j.item.doc} 이미지 ${doc.numPages}장을 저장했어요. 다운로드 폴더의 JPG를 나이스에 첨부하세요.`;
   }catch(e){$('#lMsg').textContent='❌ '+e.message}
   finally{btn.disabled=false;btn.textContent=old}
