@@ -65,7 +65,7 @@ function doPost(e) {
   const lock = LockService.getScriptLock();
   lock.waitLock(25000);
   try {
-    const f = { submit: submit_, draft: draft_, status: status_, mine: mine_, mypdf: mypdf_, tlist: tlist_, tget: tget_, treview: treview_, tedit: tedit_, tdelete: tdelete_ }[b.action];
+    const f = { submit: submit_, draft: draft_, status: status_, mine: mine_, mypdf: mypdf_, tlist: tlist_, tget: tget_, treview: treview_, tedit: tedit_, tdelete: tdelete_, tresetpin: tresetpin_ }[b.action];
     return out_(f ? f(b) : { ok: false, msg: '알 수 없는 요청입니다.' });
   } catch (err) {
     return out_({ ok: false, msg: String(err && err.message || err) });
@@ -88,11 +88,18 @@ function same_(r, s) { return String(r[C['학년']]) === s.grade && String(r[C['
 
 /* 학생: 검토 요청(같은 학생·같은 서류·같은 시작일이면 덮어쓰기) */
 const DRAFT = '작성 중';
+const RESET = 'RESET';
+function claim_(v, i, h, phone) { // 담임이 초기화한 행: 이번에 입력한 비밀번호·휴대폰으로 새로 정함
+  const sh = rows_().sh; v[i][C['PIN']] = h; sh.getRange(i + 1, C['PIN'] + 1).setValue(h);
+  if (phone) { let d = {}; try { d = JSON.parse(String(v[i][C['데이터']] || '{}').replace(/^'/, '')); } catch (e) { }
+    if (d && typeof d === 'object') { d.phone = String(phone); const j = JSON.stringify(d); v[i][C['데이터']] = j; sh.getRange(i + 1, C['데이터'] + 1).setValue("'" + j); } }
+}
 function guard_(v, s, b) { // 같은 학생의 기존 행이 있으면 비밀번호·휴대폰이 같아야 함
   const h = hash_(s.pin);
   for (let i = 1; i < v.length; i++) {
     if (String(v[i][C['학년']]) === s.grade && String(v[i][C['반']]) === s.cls && String(v[i][C['번호']]) === s.num) {
       if (!same_(v[i], s)) throw new Error('같은 학번으로 다른 이름의 신청이 있습니다. 담임 선생님께 문의하세요.');
+      if (v[i][C['PIN']] === RESET) claim_(v, i, h, b.phone);
       if (v[i][C['PIN']] !== h || (b.phone && !phoneOk_(v[i], b.phone))) throw new Error('처음 정한 비밀번호 또는 휴대폰 번호와 다릅니다.');
     }
   }
@@ -163,6 +170,7 @@ function myRows_(b) {
   let wrong = false;
   for (let i = 1; i < v.length; i++) {
     if (!same_(v[i], s)) continue;
+    if (v[i][C['PIN']] === RESET) claim_(v, i, h, b.phone);
     if (v[i][C['PIN']] !== h || !phoneOk_(v[i], b.phone)) { wrong = true; continue; }
     out.push(v[i]);
   }
@@ -241,6 +249,12 @@ function tget_(b) {
   let assets = null;
   if (b.assets && f.r[C['자산ID']]) { try { assets = JSON.parse(DriveApp.getFileById(String(f.r[C['자산ID']])).getBlob().getDataAsString()); } catch (e) { } }
   return { ok: true, item: pub_(f.r), pdf: b.nopdf ? '' : pdf, data: data, assets: assets };
+}
+function tresetpin_(b) { // 담임이 학생 비밀번호 초기화: 다음 로그인 때 입력한 비밀번호·휴대폰이 새 값이 됨
+  const t = teacher_(b), f = find_(t, str_(b.id, 80)), r = f.r, v = f.sh.getDataRange().getValues();
+  let n = 0;
+  for (let i = 1; i < v.length; i++) if (String(v[i][C['학년']]) === String(r[C['학년']]) && String(v[i][C['반']]) === String(r[C['반']]) && String(v[i][C['번호']]) === String(r[C['번호']])) { f.sh.getRange(i + 1, C['PIN'] + 1).setValue(RESET); n++; }
+  return { ok: true, n: n };
 }
 function tdelete_(b) { // 담임이 학생 서류를 삭제(시트 행 + 드라이브 PDF·자료 휴지통)
   const t = teacher_(b), f = find_(t, str_(b.id, 80));

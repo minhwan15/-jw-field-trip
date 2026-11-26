@@ -170,7 +170,7 @@ async function open(id){
     if(j.pdf){const b=Uint8Array.from(atob(j.pdf),c=>c.charCodeAt(0));pdfUrl=URL.createObjectURL(new Blob([b],{type:'application/pdf'}))}
     const fn=`${cur.doc}_${cur.grade}-${cur.cls}-${cur.num}_${cur.name}.pdf`;
     $('#detail').innerHTML=`<div class="head"><div><h2>${esc(cur.grade)}-${esc(cur.cls)} ${esc(cur.num)}번 ${esc(cur.name)} · ${esc(cur.doc)}</h2>
-      <div style="font-size:14px;color:var(--mute)">${esc(cur.period)}${cur.dest?` · ${esc(cur.dest)}`:''} · 요청 ${esc(cur.at)}</div></div><div class="topdec">${badge(cur.status)}<button class="btn ok${cur.status==='승인'?' done':''}" id="bOk2">${cur.status==='승인'?'✔ 승인됨 · 다시 전송':'✔ 승인 및 쉬운출결앱으로 전송'}</button><button class="btn fix" id="bFix2">보완 요청 쓰기</button><button class="btn" id="bEdit">✏️ 내용 직접 수정</button><button class="btn del" id="bDel">🗑 삭제</button></div></div>
+      <div style="font-size:14px;color:var(--mute)">${esc(cur.period)}${cur.dest?` · ${esc(cur.dest)}`:''} · 요청 ${esc(cur.at)}</div></div><div class="topdec">${badge(cur.status)}<button class="btn ok${cur.status==='승인'?' done':''}" id="bOk2">${cur.status==='승인'?'✔ 승인됨 · 다시 전송':'✔ 승인 및 쉬운출결앱으로 전송'}</button><button class="btn fix" id="bFix2">보완 요청 쓰기</button><button class="btn" id="bEdit">✏️ 내용 직접 수정</button><button class="btn" id="bPin">🔑 비밀번호 초기화</button><button class="btn del" id="bDel">🗑 삭제</button></div></div>
       ${cur.edits?`<details class="edlog"><summary>✏️ 담임 수정 내역 (학생에게도 보여요)</summary><pre>${esc(cur.edits)}</pre></details>`:''}<div class="audit" id="audit"><h3>🖍 자동 점검 <span><button class="btn" id="bAudit" style="min-height:36px;padding:4px 10px">다시 점검</button> <button class="btn" id="bHl" style="min-height:36px;padding:4px 10px">형광펜 끄기</button></span></h3><div id="auditBody">점검하는 중…</div></div>
       <div id="pages">${pdfUrl?'':'<p class="empty">PDF를 찾을 수 없어요.</p>'}</div>
       ${pdfUrl?`<div class="tools" style="margin-top:8px"><a class="btn" href="${pdfUrl}" target="_blank" rel="noopener">PDF 새 창에서 보기</a><a class="btn" href="${pdfUrl}" download="${esc(fn)}">PDF 내려받기</a></div>`:''}
@@ -183,7 +183,7 @@ async function open(id){
     $('#bPut').onclick=()=>{const L=(lastAudit||[]).filter(x=>x.lv!=='i');if(!L.length){say('넣을 점검 항목이 없어요.');return}
       const t=L.map((x,i)=>`${i+1}. ${x.m}`).join('\n');$('#cm').value=($('#cm').value.trim()?$('#cm').value.trim()+'\n':'')+t;$('#cm').focus()};
     await drawPages();runAudit();
-    $('#bOk2').onclick=()=>review('승인');$('#bDel').onclick=delItem;$('#bEdit').onclick=()=>location.href='./?tedit='+encodeURIComponent(cur.id);$('#bFix2').onclick=()=>{$('#cm').scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>$('#cm').focus({preventScroll:true}),300)};
+    $('#bOk2').onclick=()=>review('승인');$('#bDel').onclick=delItem;$('#bPin').onclick=resetPin;$('#bEdit').onclick=()=>location.href='./?tedit='+encodeURIComponent(cur.id);$('#bFix2').onclick=()=>{$('#cm').scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>$('#cm').focus({preventScroll:true}),300)};
     $('#bOk').onclick=()=>review('승인');$('#bFix').onclick=()=>review('보완 요청');
   }catch(e){$('#detail').innerHTML=`<p class="empty err">${esc(e.message)}</p>`}
 }
@@ -310,6 +310,12 @@ function syncMsg(x){ // 쉬운출결 전송 결과를 쉬운출결 안 쓰는 �
   if(x.ok)return ' · ✔ 쉬운출결 앱에도 전송했어요';
   if(/만들어지지 않았|로그인해/.test(m))return ' · (쉬운출결 앱을 쓰지 않는 반이라 쉬운출결 전송은 건너뛰었어요. 승인은 정상 완료)';
   return ' · ⚠️ 쉬운출결 앱 전송 실패('+m.replace(/^(기록함 등록|쉬운출결 전송) 실패:\s*/,'').replace(/기록함/g,'쉬운출결')+'). 승인은 정상 완료';
+}
+async function resetPin(){
+  const x=cur;if(!x)return;
+  if(!window.confirm(`${x.grade}-${x.cls} ${x.num}번 ${x.name} 학생의 비밀번호를 초기화할까요?\n\n학생이 다음에 로그인할 때 입력하는 비밀번호(숫자 4자리)와 휴대폰 번호가 새 값으로 정해져요. 이름·학년·반·번호는 그대로 맞게 입력해야 해요.`))return;
+  try{const r=await api({action:'tresetpin',...cred,id:x.id});say(`🔑 ${x.name} 학생 비밀번호를 초기화했어요. 학생에게 "새 비밀번호로 다시 로그인하세요"라고 알려 주세요.`);window.alert(`${x.name} 학생 비밀번호를 초기화했어요.\n학생에게 원하는 새 비밀번호(숫자 4자리)로 로그인하라고 알려 주세요.`)}
+  catch(e){say('❌ '+(/알 수 없는 요청/.test(e.message)?'비밀번호 초기화를 쓰려면 Apps Script를 새 버전으로 배포해 주세요.':e.message))}
 }
 async function delItem(){
   const x=cur;if(!x)return;
