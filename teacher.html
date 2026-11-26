@@ -35,6 +35,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .check input{width:20px;height:20px;min-height:0;margin:0}
 #app{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:20px}
 .tools{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tools a{display:inline-flex;align-items:center;text-decoration:none;border:1px solid var(--g);background:var(--card);color:var(--g);font-weight:700;border-radius:999px;padding:6px 12px;font-size:13.5px;min-height:36px;box-sizing:border-box}
 .tools button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 12px;font:inherit;font-size:13.5px;cursor:pointer;min-height:36px}
 .tools button.on{background:var(--g2);border-color:var(--g)}
 #list{display:flex;flex-direction:column;gap:8px;max-height:75vh;overflow:auto}
@@ -104,7 +105,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
   <section id="app" hidden>
     <div>
       <div class="tools" id="filters"></div>
-      <div class="tools"><button id="bRefresh">새로고침</button><button id="bLogout">로그아웃</button></div>
+      <div class="tools"><button id="bRefresh">새로고침</button><a id="bCC" href="https://class-calendar-beryl.vercel.app" target="_blank" rel="noopener">📅 쉬운출결 열기</a><button id="bLogout">로그아웃</button></div>
       <div id="msg"></div>
       <div id="list"></div>
     </div>
