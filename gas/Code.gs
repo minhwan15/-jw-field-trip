@@ -65,7 +65,7 @@ function doPost(e) {
   const lock = LockService.getScriptLock();
   lock.waitLock(25000);
   try {
-    const f = { submit: submit_, draft: draft_, status: status_, mine: mine_, mypdf: mypdf_, tlist: tlist_, tget: tget_, treview: treview_, tedit: tedit_ }[b.action];
+    const f = { submit: submit_, draft: draft_, status: status_, mine: mine_, mypdf: mypdf_, tlist: tlist_, tget: tget_, treview: treview_, tedit: tedit_, tdelete: tdelete_ }[b.action];
     return out_(f ? f(b) : { ok: false, msg: '알 수 없는 요청입니다.' });
   } catch (err) {
     return out_({ ok: false, msg: String(err && err.message || err) });
@@ -241,6 +241,12 @@ function tget_(b) {
   let assets = null;
   if (b.assets && f.r[C['자산ID']]) { try { assets = JSON.parse(DriveApp.getFileById(String(f.r[C['자산ID']])).getBlob().getDataAsString()); } catch (e) { } }
   return { ok: true, item: pub_(f.r), pdf: b.nopdf ? '' : pdf, data: data, assets: assets };
+}
+function tdelete_(b) { // 담임이 학생 서류를 삭제(시트 행 + 드라이브 PDF·자료 휴지통)
+  const t = teacher_(b), f = find_(t, str_(b.id, 80));
+  [C['PDF파일ID'], C['자산ID']].forEach(c => { const v = f.r[c]; if (v) { try { DriveApp.getFileById(String(v)).setTrashed(true); } catch (e) { } } });
+  f.sh.deleteRow(f.i + 1);
+  return { ok: true };
 }
 function tedit_(b) { // 담임이 학생 서류 내용을 직접 고쳐 저장(상태는 그대로)
   const t = teacher_(b), f = find_(t, str_(b.id, 80));
