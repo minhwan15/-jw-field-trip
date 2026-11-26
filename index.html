@@ -600,70 +600,70 @@ let reviewed=false;
 const TEL=/^01[016789]-\d{3,4}-\d{4}$/;
 const wdBetween=(a,b)=>{let c=0;for(let x=a;x<b;x=addD(x,1))if(x.getDay()%6)c++;return c};
 function check(){
-  const R=[],E=(m,f)=>R.push({lv:'e',m,f}),W=(m,f)=>R.push({lv:'w',m,f}),t=d.type==='half',days=rows(),cal=span();
+  const R=[],E=(m,f)=>R.push({lv:'e',m,f}),B=(m,f)=>R.push({lv:'e',m,f,blank:true}),W=(m,f)=>R.push({lv:'w',m,f}),t=d.type==='half',days=rows(),cal=span();
   const K=k=>`[data-k=${k}]`;
-  if(!d.name)E('학생 성명을 입력하세요',K('name'));else if(!/^[가-힣a-zA-Z ]{2,}$/.test(d.name))W('학생 성명에 숫자·기호가 섞여 있어요',K('name'));
-  if(!d.phone)E('학생 휴대폰을 입력하세요',K('phone'));else if(!TEL.test(d.phone))E('학생 휴대폰 번호 형식이 맞지 않아요',K('phone'));
+  if(!d.name)B('학생 성명을 입력하세요',K('name'));else if(!/^[가-힣a-zA-Z ]{2,}$/.test(d.name))W('학생 성명에 숫자·기호가 섞여 있어요',K('name'));
+  if(!d.phone)B('학생 휴대폰을 입력하세요',K('phone'));else if(!TEL.test(d.phone))E('학생 휴대폰 번호 형식이 맞지 않아요',K('phone'));
   if(!/^\d{1,2}$/.test(d.cls||'')||+d.cls<1)E('반을 숫자로 입력하세요',K('cls'));
   if(!/^\d{1,2}$/.test(d.num||'')||+d.num<1)E('번호를 숫자로 입력하세요',K('num'));
-  if(t){const h=pd(d.hdate);if(!h)E('반일 사용 날짜를 고르세요',K('hdate'));else if(h.getDay()%6===0)E('반일 사용 날짜가 주말이에요',K('hdate'))}
+  if(t){const h=pd(d.hdate);if(!h)B('반일 사용 날짜를 고르세요',K('hdate'));else if(h.getDay()%6===0)E('반일 사용 날짜가 주말이에요',K('hdate'))}
   else{
     const s=pd(d.start),e=pd(d.end);
-    if(!s)E('체험학습 시작일을 고르세요',K('start'));
-    if(!e)E('체험학습 종료일을 고르세요',K('end'));
+    if(!s)B('체험학습 시작일을 고르세요',K('start'));
+    if(!e)B('체험학습 종료일을 고르세요',K('end'));
     if(s&&e&&e<s)E('종료일이 시작일보다 빨라요',K('end'));
     if(s&&s.getDay()%6===0)W('시작일이 주말이에요. 날짜를 다시 확인하세요',K('start'));
     if(s&&e&&(e-s)/864e5>=14)E('기간이 너무 깁니다(14일 초과). 날짜를 확인하세요',K('end'));
   }
   const n=parseFloat(d.days),cum=parseFloat(d.cum);
-  if(d.days===''||d.days==null||isNaN(n)||n<=0)E('출석 인정 신청일수를 입력하세요',K('days'));
+  if(d.days===''||d.days==null||isNaN(n)||n<=0)B('출석 인정 신청일수를 입력하세요',K('days'));
   else{
     if(t&&n!==0.5)W('반일 단위는 보통 0.5일로 적어요',K('days'));
     if(!t&&days.length&&n>weekdays())E(`신청일수(${n}일)가 기간의 평일 수(${weekdays()}일)보다 많아요`,K('days'));
     if(n>20)E('신청일수가 연간 출석인정기간(20일)을 넘어요',K('days'));
   }
-  if(d.cum===''||d.cum==null)W('금회까지 누적 사용기간을 적어 주세요(이번 신청분 포함)',K('cum'));
+  if(d.cum===''||d.cum==null)B('금회까지 누적 사용기간을 적어 주세요(이번 신청분 포함)',K('cum'));
   else if(isNaN(cum))E('누적 사용기간은 숫자로 입력하세요',K('cum'));
   else{if(!isNaN(n)&&cum<n)E('누적 사용기간이 이번 신청일수보다 작아요(이번 신청분 포함)',K('cum'));if(cum>20)E(`누적 사용기간(${cum}일)이 연간 20일을 넘어요`,K('cum'))}
-  if(!d.form)E('학습형태를 고르세요','#forms');
-  if(!d.dest)E('목적지를 입력하세요',K('dest'));
+  if(!d.form)B('학습형태를 고르세요','#forms');
+  if(!d.dest)B('목적지를 입력하세요',K('dest'));
   if(cal.length>1&&!d.lodge)W('1박 이상이면 숙박장소를 적어 주세요',K('lodge'));
   {const L=String(d.lodge||'').trim(),G=/^(?:[가-힣]{1,4}\s*)?(호텔|펜션|리조트|모텔|숙소|민박|게스트하우스|캠핑장|글램핑|콘도|집|자택|본가|외가|친가|큰집|할머니\s*댁|할아버지\s*댁|조부모님?\s*댁|친척\s*[집댁]|이모\s*[집댁]|삼촌\s*[집댁]|고모\s*[집댁])$/;
    if(L&&(L.replace(/\s/g,'').length<6||G.test(L)))E('숙박장소는 업체명이나 주소까지 구체적으로 적어 주세요 (예: 경주 ○○호텔)',K('lodge'))}
-  if(!d.gName)E('보호자명을 입력하세요',K('gName'));
-  if(!d.gRel)E('보호자 관계를 입력하세요',K('gRel'));
-  if(!d.gPhone)E('보호자 휴대폰을 입력하세요',K('gPhone'));else if(!TEL.test(d.gPhone))E('보호자 휴대폰 번호 형식이 맞지 않아요',K('gPhone'));
-  if(!d.lName)E('인솔자명을 입력하세요(보호자와 같으면 복사 버튼)',K('lName'));
-  if(!d.lRel)E('인솔자 관계를 입력하세요',K('lRel'));
-  if(!d.lPhone)E('인솔자 휴대폰을 입력하세요',K('lPhone'));else if(!TEL.test(d.lPhone))E('인솔자 휴대폰 번호 형식이 맞지 않아요',K('lPhone'));
+  if(!d.gName)B('보호자명을 입력하세요',K('gName'));
+  if(!d.gRel)B('보호자 관계를 입력하세요',K('gRel'));
+  if(!d.gPhone)B('보호자 휴대폰을 입력하세요',K('gPhone'));else if(!TEL.test(d.gPhone))E('보호자 휴대폰 번호 형식이 맞지 않아요',K('gPhone'));
+  if(!d.lName)B('인솔자명을 입력하세요(보호자와 같으면 복사 버튼)',K('lName'));
+  if(!d.lRel)B('인솔자 관계를 입력하세요',K('lRel'));
+  if(!d.lPhone)B('인솔자 휴대폰을 입력하세요',K('lPhone'));else if(!TEL.test(d.lPhone))E('인솔자 휴대폰 번호 형식이 맞지 않아요',K('lPhone'));
   const lbl=i=>`${i+1}일차${days[i]?`(${md(days[i])})`:''}`;
   if(tab==='app'){
-    if(!d.c1)E('세부 규칙·불허기간 확인에 체크하세요',K('c1'));
-    if(t&&!d.c2)E('반일 단위: 당일 수업 참여 여부 확인에 체크하세요',K('c2'));
-    if(t&&!d.c3)E('반일 단위: 4시간 미만 확인에 체크하세요',K('c3'));
-    if(!d.purpose)E('목적을 입력하세요',K('purpose'));
-    days.forEach((x,i)=>{if(i<nRows()&&!(d.plans[i]||'').trim())E(`${lbl(i)} 학습계획이 비어 있어요`,`[data-plan="${i}"]`)});
+    if(!d.c1)B('세부 규칙·불허기간 확인에 체크하세요',K('c1'));
+    if(t&&!d.c2)B('반일 단위: 당일 수업 참여 여부 확인에 체크하세요',K('c2'));
+    if(t&&!d.c3)B('반일 단위: 4시간 미만 확인에 체크하세요',K('c3'));
+    if(!d.purpose)B('목적을 입력하세요',K('purpose'));
+    days.forEach((x,i)=>{if(i<nRows()&&!(d.plans[i]||'').trim())B(`${lbl(i)} 학습계획이 비어 있어요`,`[data-plan="${i}"]`)});
     days.forEach((x,i)=>{const v=normP(d.plans[i]);if(i<nRows()&&v&&days.some((y,j)=>j<i&&normP(d.plans[j])===v))E(`${lbl(i)} 학습계획이 다른 날과 같아요`,`[data-plan="${i}"]`)});
     if(days.length>nRows())W(`수업일이 ${days.length}일이라 양식의 5칸을 넘어요. 담임 선생님과 상의하세요`,'#plans');
-    if(cal.length>=5&&!d.safe)E('5일 이상 연속: 학생안전 동의에 체크하세요',K('safe'));
+    if(cal.length>=5&&!d.safe)B('5일 이상 연속: 학생안전 동의에 체크하세요',K('safe'));
     const ad=pd(d.appDate),s=pd(t?d.hdate:d.start);
-    if(!ad)E('작성일을 고르세요',K('appDate'));else if(s&&ad>s)E('작성일이 체험학습 시작일보다 늦어요',K('appDate'));
+    if(!ad)B('작성일을 고르세요',K('appDate'));else if(s&&ad>s)E('작성일이 체험학습 시작일보다 늦어요',K('appDate'));
     if(s){const c=wdBetween(pd(today()),s);if(c<4)W(`시작일까지 수업일이 ${c}일 남았어요. 제출 기한(수업일 4일 전)을 넘겼을 수 있으니 담임 선생님께 먼저 연락하세요`,K(t?'hdate':'start'))}
-    if(!sig.appP)E('보호자 서명을 해 주세요','[data-sig=appP] canvas');
-    if(!sig.appS)E('학생 서명을 해 주세요','[data-sig=appS] canvas');
+    if(!sig.appP)B('보호자 서명을 해 주세요','[data-sig=appP] canvas');
+    if(!sig.appS)B('학생 서명을 해 주세요','[data-sig=appS] canvas');
   }else{
-    if(!(d.title||d.purpose))E('제목을 입력하세요',K('title'));
+    if(!(d.title||d.purpose))B('제목을 입력하세요',K('title'));
     days.forEach((x,i)=>{if(i>=nRows())return;const v=(d.reps[i]||'').trim();
-      if(!v)E(`${lbl(i)} 결과 내용이 비어 있어요`,`[data-rep="${i}"]`);
+      if(!v)B(`${lbl(i)} 결과 내용이 비어 있어요`,`[data-rep="${i}"]`);
       else if(repLines[i]<4)W(`${lbl(i)} 분량이 ${repLines[i]}줄이에요(1일 4줄 꽉 채우기)`,`[data-rep="${i}"]`);
       else if(repLines[i]>4)W(`${lbl(i)} 내용이 양식 4줄을 넘어요(${repLines[i]}줄). 줄여 주세요`,`[data-rep="${i}"]`);
       if(!photos[i])W(`${lbl(i)} 사진이 없어요(1일 1사진)`,`[data-ph="${i}"]`)});
     const rd=pd(d.repDate),e=pd(t?d.hdate:d.end);
-    if(!rd)E('작성일을 고르세요',K('repDate'));
+    if(!rd)B('작성일을 고르세요',K('repDate'));
     else if(e&&rd<e)E('작성일이 체험학습 종료일보다 빨라요',K('repDate'));
     if(e){const lim=wdBetween(addD(e,1),addD(rd||pd(today()),1));if(lim>7)W(`종료 후 수업일 ${lim}일이 지났어요. 보고서 제출 기한(7일 이내)을 확인하세요`,K('repDate'))}
-    if(!sig.repP)E('보호자 서명을 해 주세요','[data-sig=repP] canvas');
-    if(!sig.repS)E('학생 서명을 해 주세요','[data-sig=repS] canvas');
+    if(!sig.repP)B('보호자 서명을 해 주세요','[data-sig=repP] canvas');
+    if(!sig.repS)B('학생 서명을 해 주세요','[data-sig=repS] canvas');
   }
   typoCheck(W);
   shrunk.forEach(t=>W(`칸에 비해 글이 길어 글자가 많이 작아졌어요: "${t.length>18?t.slice(0,18)+'…':t}"`,'#pv'));
@@ -699,10 +699,11 @@ const goFirst=()=>{const r=$('#issues')._R&&$('#issues')._R[0],el=r&&document.qu
 function run(id,act){ // 오류·오타·빈칸 점검 → 문제 없으면 바로 실행, 있으면 창으로 보여 주고 선택
   reviewed=true;const {ne,nw}=showReview();
   if(!ne&&!nw){act();return}
-  const R=$('#issues')._R;
+  const R=$('#issues')._R,nb=id==='req'&&!TEDIT?R.filter(r=>r.blank).length:0;
   const list=`<ul>${R.slice(0,12).map(r=>`<li class="${r.lv}"><b>${r.lv==='e'?'오류':'확인'}</b><span>${esc(r.m)}</span></li>`).join('')}${R.length>12?`<li>…외 ${R.length-12}건 (버튼 아래 점검 결과 목록 참고)</li>`:''}</ul>`;
-  modal(`<h3>${ne?'⚠️ 빠지거나 틀린 곳이 있어요':'확인해 주세요'}</h3><p style="margin:0;color:var(--mute);font-size:14px">${ne?`오류 ${ne}건`:''}${ne&&nw?', ':''}${nw?`확인 권장 ${nw}건`:''}</p>${list}`,
-    ne?[{label:'고치러 가기',p:true,fn:goFirst},{label:`그래도 ${ACTNAME[id]}`,fn:act}]
+  modal(`<h3>${nb?'✋ 빈칸이 있어서 검토 요청을 보낼 수 없어요':ne?'⚠️ 빠지거나 틀린 곳이 있어요':'확인해 주세요'}</h3><p style="margin:0;color:var(--mute);font-size:14px">${nb?`빈칸 ${nb}곳을 채워야 보낼 수 있어요(숙박장소는 비워도 돼요). `:''}${ne?`오류 ${ne}건`:''}${ne&&nw?', ':''}${nw?`확인 권장 ${nw}건`:''}</p>${list}`,
+    nb?[{label:'빈칸 채우러 가기',p:true,fn:goFirst}]
+    :ne?[{label:'고치러 가기',p:true,fn:goFirst},{label:`그래도 ${ACTNAME[id]}`,fn:act}]
       :[{label:`이대로 ${ACTNAME[id]}`,p:true,fn:act},{label:'고치러 가기',fn:goFirst}]);
 }
 
