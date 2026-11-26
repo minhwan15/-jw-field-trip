@@ -731,18 +731,19 @@ const fname=()=>`${tab==='app'?'교외체험학습_신청서':'교외체험학�
 let toastT;
 const say=m=>{$('#msg').textContent=m;if(!m)return;const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,4500)};
 async function pageCanvases(){ // 미리보기 페이지를 A4 한 장씩 고해상도 그림으로
-  if(!window.html2canvas)throw new Error('lib');
-  await document.fonts.ready;
-  const cap=$('#cap'),out=[];
-  for(const p of $$('#pv .page')){
+  if(!window.html2canvas)throw new Error('PDF 만드는 도구를 불러오지 못했어요. 카톡 안 브라우저라면 크롬·삼성인터넷으로 열어 주세요.');
+  const lim=(p,ms,msg)=>Promise.race([p,new Promise((ok,no)=>setTimeout(()=>msg?no(new Error(msg)):ok(),ms))]);
+  await lim(document.fonts.ready,4000); // 글꼴이 늦으면 기다리지 않고 진행
+  const cap=$('#cap'),out=[],pg=$$('#pv .page');
+  for(const [n,p] of pg.entries()){
     cap.innerHTML='';const el=p.cloneNode(true);el.style.transform='none';cap.append(el);
-    await Promise.all([...el.querySelectorAll('img')].map(im=>im.complete?0:new Promise(r=>{im.onload=im.onerror=r})));
-    out.push(await html2canvas(el,{scale:2.1,backgroundColor:'#fff',useCORS:true}));
+    await lim(Promise.all([...el.querySelectorAll('img')].map(im=>im.complete?0:new Promise(r=>{im.onload=im.onerror=r}))),6000);
+    out.push(await lim(html2canvas(el,{scale:2.1,backgroundColor:'#fff',useCORS:true}),45000,`${n+1}쪽 서류 그림을 만들다 멈췄어요. 사진이 너무 크거나 폰 메모리가 부족할 수 있어요. 다른 앱을 닫고 다시 시도하거나 PC에서 보내 주세요.`));
   }
   cap.innerHTML='';return out;
 }
 async function makePdf(fix){ // 담임 검토 요청용(내부 전송)
-  if(!window.jspdf)throw new Error('lib');
+  if(!window.jspdf)throw new Error('PDF 만드는 도구를 불러오지 못했어요. 카톡 안 브라우저라면 크롬·삼성인터넷으로 열어 주세요.');
   const {jsPDF}=window.jspdf,pdf=new jsPDF({unit:'mm',format:'a4'}),cs=await pageCanvases();if(fix)await fix(cs);
   cs.forEach((c,i)=>{if(i)pdf.addPage();pdf.addImage(c.toDataURL('image/jpeg',.9),'JPEG',0,0,210,297)});
   return pdf.output('blob');
@@ -758,10 +759,10 @@ $('#bDone').onclick=()=>run('pdf',doPdf);
 
 /* ── 담임 검토 (구글 시트 서버) ── */
 const API=(window.JW_API||'').trim();
-async function api(o){
-  const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),60000);
+async function api(o,ms){
+  const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),ms||(o&&o.pdf?120000:60000));
   try{const r=await fetch(API,{method:'POST',body:JSON.stringify(o),signal:ctl.signal});const j=await r.json();if(!j.ok)throw new Error(j.msg||'요청 실패');return j}
-  catch(e){if(e.name==='AbortError')throw new Error('응답이 늦어요. 잠시 후 다시 시도하세요.');if(e instanceof TypeError)throw new Error('서버에 연결하지 못했어요. 인터넷 연결을 확인하세요.');throw e}
+  catch(e){if(e.name==='AbortError')throw new Error(o&&o.pdf?'전송이 오래 걸려 멈췄어요. 와이파이에서 다시 눌러 주세요. (이미 전송됐을 수 있으니 보관함에서 상태를 먼저 확인하세요)':'응답이 늦어요. 잠시 후 다시 시도하세요.');if(e instanceof TypeError)throw new Error('서버에 연결하지 못했어요. 인터넷 연결을 확인하세요.');throw e}
   finally{clearTimeout(tm)}
 }
 const blob64=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]);r.onerror=rej;r.readAsDataURL(b)});
