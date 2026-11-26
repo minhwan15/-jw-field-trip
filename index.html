@@ -1022,9 +1022,10 @@ async function teacherEdit(){
     const back=document.createElement('button');back.className='tbtn';back.type='button';back.textContent='← 검토 화면으로';back.onclick=()=>location.href='teacher.html';$('#who').append(back);
     document.body.classList.add('tedit');
     $('#mainApp').hidden=false;$('#tabs').hidden=true;$('#rev').hidden=false;$('#bReq').hidden=false;$('#bDone').hidden=true;
-    $('#bReq').textContent='수정 내용 저장';$('#bReq').onclick=()=>run('req',doTEdit);
+    $('#bReq').textContent='✔ 저장 및 승인';$('#bReq').onclick=()=>run('req',()=>doTEdit(true));
+    const so=document.createElement('button');so.type='button';so.className='btn';so.id='bSaveOnly';so.textContent='저장만 (승인은 나중에)';so.onclick=()=>run('req',()=>doTEdit(false));$('#actRow').append(so);
     fill();lockId(true);modeUI();buildDays();drawTerms();setTab(tab);render();
-    $('#curInfo').innerHTML=(TEDIT.oldPdf?'서명·사진은 미리보기엔 안 보여도 저장할 때 원래 서류에서 그대로 옮겨져요. ':'')+'서명은 학생·보호자가 한 그대로 들어가요. 내용만 고친 뒤 <b>수정 내용 저장</b>을 누르세요. 상태(승인·대기)는 바뀌지 않아요.';
+    $('#curInfo').innerHTML=(TEDIT.oldPdf?'서명·사진은 미리보기엔 안 보여도 저장할 때 원래 서류에서 그대로 옮겨져요. ':'')+'서명은 학생·보호자가 한 그대로 들어가요. 고친 뒤 <b>저장 및 승인</b>을 누르면 바로 승인되고 쉬운출결로 전송돼요. 승인을 미루려면 <b>저장만</b>을 누르세요.';
   }catch(e){$('#whoName').textContent='❌ '+e.message}
 }
 function fieldName(k){
@@ -1051,18 +1052,26 @@ async function keepOld(cs){ // 원래 PDF의 서명·사진 영역을 새 페이
   }
 }
 function sigRect(k){const f=FM[k];if(!f)return null;const cy=f.top+f.h/2;return [f.cx-28,cy-15,56,30]}
-async function doTEdit(){
+async function doTEdit(approve){
   const changes=teditChanges();
-  if(!changes.length){modal('<h3>바뀐 내용이 없어요</h3><p>고친 곳이 없어서 저장하지 않았어요.</p>',[{label:'확인',p:true}]);return}
-  const s=pd(d.type==='half'?d.hdate:d.start);
-  modal('<h3><span class="spin"></span>수정 내용 저장 중</h3><p style="margin:0">서류를 다시 만들어 저장하고 있어요.</p>',[],true);
+  if(!changes.length&&!approve){modal('<h3>바뀐 내용이 없어요</h3><p>고친 곳이 없어서 저장하지 않았어요.</p>',[{label:'확인',p:true}]);return}
+  modal(`<h3><span class="spin"></span>${approve?'저장 및 승인 중':'수정 내용 저장 중'}</h3><p style="margin:0">${changes.length?'서류를 다시 만들어 저장하고 있어요.':'고친 곳이 없어 승인만 해요.'}</p>`,[],true);
   try{
-    const pdf=await blob64(await makePdf(TEDIT.oldPdf?keepOld:null));
-    const j=await api({action:'tedit',...TEDIT.cred,id:TEDIT.id,changes,period:periodLabel(),dest:d.dest,data:{...d,_sig:Object.fromEntries(Object.keys(sig).map(k=>[k,!!sig[k]])),_ph:[0,1,2,3,4].map(i=>!!photos[i])},pdf});
-    const sy=j.sync&&!j.sync.off?(j.sync.ok?' · 쉬운출결에도 다시 반영했어요':' · ⚠️ 쉬운출결 반영 실패: '+j.sync.msg):'';
-    try{sessionStorage.setItem('jw-tmsg','✏️ 내용을 고쳐 저장했어요 (학생 보관함에 고친 부분이 표시돼요)'+sy+'\n'+changes.map(x=>'· '+x).join('\n'))}catch(e){}
-    location.href='teacher.html?open='+encodeURIComponent(TEDIT.id);
-  }catch(e){modal(`<h3>저장하지 못했어요</h3><p>${esc(e.message)}</p>`,[{label:'확인',p:true}])}
+    let sy='',msg='';
+    if(changes.length){
+      const pdf=await blob64(await makePdf(TEDIT.oldPdf?keepOld:null));
+      const j=await api({action:'tedit',...TEDIT.cred,id:TEDIT.id,changes,period:periodLabel(),dest:d.dest,data:{...d,_sig:Object.fromEntries(Object.keys(sig).map(k=>[k,!!sig[k]])),_ph:[0,1,2,3,4].map(i=>!!photos[i])},pdf});
+      if(!approve&&j.sync&&!j.sync.off)sy=j.sync.ok?' · 쉬운출결에도 다시 반영했어요':' · ⚠️ 쉬운출결 반영 실패: '+j.sync.msg;
+      msg='✏️ 내용을 고쳐 저장했어요 (학생 보관함에 고친 부분이 표시돼요)';
+    }
+    if(approve){
+      const r=await api({action:'treview',...TEDIT.cred,id:TEDIT.id,status:'승인',comment:''});
+      sy=r.sync&&!r.sync.off?(r.sync.ok?' · 쉬운출결앱으로 전송했어요':' · ⚠️ 쉬운출결 전송 실패: '+r.sync.msg):'';
+      msg=(msg?msg+'\n':'')+'✅ 승인 처리했어요';
+    }
+    try{sessionStorage.setItem('jw-tmsg',msg+sy+(changes.length?'\n'+changes.map(x=>'· '+x).join('\n'):''))}catch(e){}
+    location.href='teacher.html'+(approve?'':'?open='+encodeURIComponent(TEDIT.id));
+  }catch(e){modal(`<h3>${approve?'저장·승인하지':'저장하지'} 못했어요</h3><p>${esc(e.message)}</p>`,[{label:'확인',p:true}])}
 }
 const TSES=(()=>{try{return JSON.parse(localStorage.getItem('jw-t')||'null')}catch(e){return null}})();
 if(TEDIT)teacherEdit();else if(SES)enter(SES);else if(TSES&&!/[?&]gate/.test(location.search))location.replace('teacher.html');else{$('#gate').hidden=false;if(d.name){$('#sname').value=d.name;$('#sc').value=d.cls||'';$('#sn').value=d.num||'';$('#sphone').value=d.phone||'';$('#sg').value=d.grade||'3'}}

@@ -325,7 +325,7 @@ async function login(c){
   $('#lmsg').textContent='확인하는 중…';$('#lmsg').className='';
   try{const j=await api({action:'tlist',...c});cred=c;try{localStorage.setItem('jw-t',JSON.stringify(c))}catch(e){}
     $('#login').hidden=true;$('#app').hidden=false;items=j.list;$('#who').textContent=j.who;drawList();say(`요청 ${items.length}건`);
-    const op=new URLSearchParams(location.search).get('open');if(op&&items.some(x=>x.id===op)){history.replaceState(null,'','teacher.html');await open(op);let m='';try{m=sessionStorage.getItem('jw-tmsg')||'';sessionStorage.removeItem('jw-tmsg')}catch(e){}if(m){say(m);const n=document.createElement('p');n.className='tnote';n.textContent=m;$('#detail').prepend(n)}}}
+    const op=new URLSearchParams(location.search).get('open');if(!op){let m='';try{m=sessionStorage.getItem('jw-tmsg')||'';sessionStorage.removeItem('jw-tmsg')}catch(e){}if(m){say(m.split('\n')[0]);const nx=items.find(x=>/대기/.test(x.status));$('#detail').innerHTML=`<p class="tnote">${esc(m)}</p><div class="empty">왼쪽 목록에서 다음 학생을 고르세요.${nx?`<br><button class="btn ok" id="bNext" style="margin-top:14px">다음 검토 대기: ${esc(nx.name)} 열기</button>`:''}</div>`;if(nx)$('#bNext').onclick=()=>open(nx.id)}}if(op&&items.some(x=>x.id===op)){history.replaceState(null,'','teacher.html');await open(op);let m='';try{m=sessionStorage.getItem('jw-tmsg')||'';sessionStorage.removeItem('jw-tmsg')}catch(e){}if(m){say(m);const n=document.createElement('p');n.className='tnote';n.textContent=m;$('#detail').prepend(n)}}}
   catch(e){$('#lmsg').textContent=e.message;$('#lmsg').className='err';$('#login').hidden=false;$('#app').hidden=true}
 }
 $('#bLogin').onclick=()=>login({grade:$('#lg').value,cls:$('#lc').value.trim(),tpw:$('#lp').value});
