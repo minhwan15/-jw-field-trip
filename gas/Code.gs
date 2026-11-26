@@ -302,7 +302,7 @@ function pushClassCalendar_(r) {
   const g = String(r[C['학년']]), c = String(r[C['반']]).padStart(2, '0'), n = String(r[C['번호']]).padStart(2, '0');
   const doc = r[C['구분']] === '결과보고서' ? 'rep' : 'app', half = d.type === 'half';
   const start = half ? d.hdate : d.start, end = half ? d.hdate : (d.end || d.start);
-  if (!start) return { ok: false, msg: '기간 정보가 없어 기록함에 보내지 못했습니다' };
+  if (!start) return { ok: false, msg: '기간 정보가 없어 쉬운출결에 보내지 못했습니다' };
   let pdf = '';
   try { const bytes = DriveApp.getFileById(r[C['PDF파일ID']]).getBlob().getBytes(); if (bytes.length <= 3 * 1024 * 1024) pdf = Utilities.base64Encode(bytes); } catch (e) { }
   const purpose = String(d.title || d.purpose || '').trim(), form = String(d.form || '').trim();
@@ -313,9 +313,9 @@ function pushClassCalendar_(r) {
   try {
     const res = UrlFetchApp.fetch(url + '/api/experience-intake', { method: 'post', contentType: 'application/json', headers: { 'x-intake-key': key }, payload: JSON.stringify(payload), muteHttpExceptions: true, followRedirects: false });
     let j = {}; try { j = JSON.parse(res.getContentText()); } catch (e) { }
-    if (res.getResponseCode() === 200 && j.ok) return { ok: true, msg: j.created ? '기록함에 새 체험학습 기록 등록' : '기록함 체험학습 기록 갱신' };
-    return { ok: false, msg: '기록함 등록 실패: ' + (j.message || j.error || ('HTTP ' + res.getResponseCode())) };
-  } catch (e) { return { ok: false, msg: '기록함에 연결하지 못했습니다' }; }
+    if (res.getResponseCode() === 200 && j.ok) return { ok: true, msg: j.created ? '쉬운출결에 새 체험학습 기록 등록' : '쉬운출결 체험학습 기록 갱신' };
+    return { ok: false, msg: '쉬운출결 전송 실패: ' + (j.message || j.error || ('HTTP ' + res.getResponseCode())) };
+  } catch (e) { return { ok: false, msg: '쉬운출결에 연결하지 못했습니다' }; }
 }
 
 function treview_(b) {

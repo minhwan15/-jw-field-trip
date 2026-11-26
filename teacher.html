@@ -304,11 +304,17 @@ function runAudit(){
     :`<p style="margin:0 0 6px;font-size:14px">오류 <b style="color:#d7261e">${ne}</b> · 확인 <b style="color:#d99a1e">${nw}</b>${ni?` · 참고 ${ni}`:''} <span style="color:var(--mute)">(항목을 누르면 해당 위치로 이동)</span></p><ul>${R.map((r,i)=>`<li class="${r.lv}" data-ri="${i}"><b>${r.lv==='e'?'오류':r.lv==='w'?'확인':'참고'}</b><span>${esc(r.m)}</span></li>`).join('')}</ul>`;
 }
 document.addEventListener('click',e=>{const li=e.target.closest('.audit li[data-ri]');if(!li)return;const h=document.querySelector(`.hl[data-ri="${li.dataset.ri}"]`);if(h){$('#pages').classList.remove('nohl');h.scrollIntoView({behavior:'smooth',block:'center'});h.classList.remove('flash');void h.offsetWidth;h.classList.add('flash')}});
+function syncMsg(x){ // 쉬운출결 전송 결과를 쉬운출결 안 쓰는 선생님도 알아보게
+  if(!x||x.off)return '';const m=String(x.msg||'');
+  if(x.ok)return ' · ✔ 쉬운출결 앱에도 전송했어요';
+  if(/만들어지지 않았|로그인해/.test(m))return ' · (쉬운출결 앱을 쓰지 않는 반이라 쉬운출결 전송은 건너뛰었어요. 승인은 정상 완료)';
+  return ' · ⚠️ 쉬운출결 앱 전송 실패('+m.replace(/^(기록함 등록|쉬운출결 전송) 실패:\s*/,'').replace(/기록함/g,'쉬운출결')+'). 승인은 정상 완료';
+}
 async function review(st){
   const cm=$('#cm').value.trim();
   if(st==='보완 요청'&&!cm){$('#cm').focus();say('보완할 내용을 적어 주세요.',true);return}
   $('#bOk').disabled=$('#bFix').disabled=$('#bOk2').disabled=true;say('저장하는 중…');
-  try{const rv=await api({action:'treview',...cred,id:cur.id,status:st,comment:cm});const nm=cur.name;cur=null;await load();doneView(nm,st);const sy=rv.sync&&!rv.sync.off?` · ${rv.sync.ok?'✔':'⚠️'} ${rv.sync.msg}`:'';say(`${nm} 학생: ${st} 처리했어요${sy}. 학생은 내 보관함에서 확인합니다.`,rv.sync&&!rv.sync.ok&&!rv.sync.off)}
+  try{const rv=await api({action:'treview',...cred,id:cur.id,status:st,comment:cm});const nm=cur.name;cur=null;await load();doneView(nm,st);const sy=syncMsg(rv.sync);say(`${nm} 학생: ${st} 처리했어요${sy}. 학생은 내 보관함에서 확인합니다.`,rv.sync&&!rv.sync.ok&&!rv.sync.off)}
   catch(e){say(e.message,true);$('#bOk').disabled=$('#bFix').disabled=$('#bOk2').disabled=false}
 }
 function doneView(nm,st){ // 처리 후 목록으로 돌아가기
