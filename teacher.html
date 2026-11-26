@@ -124,7 +124,8 @@ let cred=null,items=[],cur=null,filter='대기',pdfUrl='',curData={},pdfBytes=nu
 const say=(m,bad)=>{$('#msg').textContent=m;$('#msg').classList.toggle('err',!!bad)};
 async function api(o){
   if(!API)throw new Error('검토 서버 주소(config.js)가 설정되지 않았습니다.');
-  const r=await fetch(API,{method:'POST',body:JSON.stringify(o)});const j=await r.json();if(!j.ok)throw new Error(j.msg||'요청 실패');return j;
+  let r;for(let k=0;;k++){try{r=await fetch(API,{method:'POST',body:JSON.stringify(o)});break}catch(e){if(k>=1)throw new Error('서버에 연결하지 못했어요. 인터넷(와이파이·데이터) 연결을 확인하고 다시 눌러 주세요.');await new Promise(z=>setTimeout(z,1500))}}
+  let j;try{j=await r.json()}catch(e){throw new Error('서버 응답을 읽지 못했어요. 잠시 후 다시 시도하세요.')}if(!j.ok)throw new Error(j.msg||'요청 실패');return j;
 }
 const badge=s=>`<span class="badge ${s==='승인'?'ok':s==='보완 요청'?'fix':''}">${esc(s)}</span>`;
 const FIL=[['대기','검토 대기',x=>/대기/.test(x.status)],['보완','보완 요청',x=>x.status==='보완 요청'],['승인','승인',x=>x.status==='승인'],['전체','전체',()=>true]];
