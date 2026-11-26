@@ -375,7 +375,8 @@ const ymdK=x=>x?`${x.getFullYear()}. ${x.getMonth()+1}. ${x.getDate()}.`:'';
 const nRows=()=>5;
 
 /* 입력 바인딩 */
-$('#forms').innerHTML=FORMS.map(f=>`<label><input type="radio" name="form" value="${f}">${f}</label>`).join('');
+const FORM_OFF=['가정학습']; // 학교 방침상 선택 불가
+$('#forms').innerHTML=FORMS.map(f=>FORM_OFF.includes(f)?`<label style="opacity:.45;cursor:not-allowed" title="선택할 수 없어요"><input type="radio" name="form" value="${f}" disabled>${f} <small>(선택 불가)</small></label>`:`<label><input type="radio" name="form" value="${f}">${f}</label>`).join('');
 function fill(){
   $$('[data-k]').forEach(el=>{const v=d[el.dataset.k];if(el.type==='checkbox')el.checked=!!v;else if(v!=null)el.value=v;else if(el.tagName!=='SELECT')el.value=''});
   $$('[name=type]').forEach(r=>r.checked=r.value===d.type);
@@ -626,6 +627,7 @@ function check(){
   else if(isNaN(cum))E('누적 사용기간은 숫자로 입력하세요',K('cum'));
   else{if(!isNaN(n)&&cum<n)E('누적 사용기간이 이번 신청일수보다 작아요(이번 신청분 포함)',K('cum'));if(cum>20)E(`누적 사용기간(${cum}일)이 연간 20일을 넘어요`,K('cum'))}
   if(!d.form)B('학습형태를 고르세요','#forms');
+  else if(FORM_OFF.includes(d.form))B(`${d.form}은(는) 선택할 수 없어요. 다른 학습형태를 고르세요`,'#forms');
   if(!d.dest)B('목적지를 입력하세요',K('dest'));
   if(cal.length>1&&!d.lodge)W('1박 이상이면 숙박장소를 적어 주세요',K('lodge'));
   {const L=String(d.lodge||'').trim(),G=/^(?:[가-힣]{1,4}\s*)?(호텔|펜션|리조트|모텔|숙소|민박|게스트하우스|캠핑장|글램핑|콘도|집|자택|본가|외가|친가|큰집|할머니\s*댁|할아버지\s*댁|조부모님?\s*댁|친척\s*[집댁]|이모\s*[집댁]|삼촌\s*[집댁]|고모\s*[집댁])$/;
