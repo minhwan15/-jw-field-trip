@@ -730,15 +730,37 @@ $('#tApp').onclick=()=>setTab('app');$('#tRep').onclick=()=>setTab('rep');
 const fname=()=>`${tab==='app'?'교외체험학습_신청서':'교외체험학습_결과보고서'}_${d.grade||''}-${d.cls||''}-${d.num||''}_${d.name||'이름'}`;
 let toastT;
 const say=m=>{$('#msg').textContent=m;if(!m)return;const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,4500)};
+async function rasterPage(el,K){ // 미리보기 한 장을 캔버스에 직접 그림(배경·덮개·글자·서명·사진)
+  const R0=el.getBoundingClientRect(),cv=document.createElement('canvas');cv.width=Math.round(R0.width*K);cv.height=Math.round(R0.height*K);
+  const g=cv.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,cv.width,cv.height);g.scale(K,K);
+  const X=r=>r.left-R0.left,Y=r=>r.top-R0.top;
+  for(const n of el.querySelectorAll('*')){
+    const cs=getComputedStyle(n);if(cs.display==='none'||cs.visibility==='hidden')continue;const r=n.getBoundingClientRect();
+    const bg=cs.backgroundColor;if(bg&&bg!=='transparent'&&!/rgba\(.*,\s*0\)$/.test(bg)&&n!==el){g.fillStyle=bg;g.fillRect(X(r),Y(r),r.width,r.height)}
+    if(n.tagName==='IMG'){if(!n.complete||!n.naturalWidth)continue;let x=X(r),y=Y(r),w=r.width,h=r.height;
+      if(cs.objectFit==='contain'){const s=Math.min(w/n.naturalWidth,h/n.naturalHeight),ww=n.naturalWidth*s,hh=n.naturalHeight*s;x+=(w-ww)/2;y+=(h-hh)/2;w=ww;h=hh}
+      try{g.drawImage(n,x,y,w,h)}catch(e){}continue}
+    for(const t of n.childNodes){if(t.nodeType!==3||!t.data.trim())continue;
+      g.font=`${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;g.fillStyle=cs.color;g.textBaseline='alphabetic';
+      const m=g.measureText('가Hg'),asc=m.fontBoundingBoxAscent||parseFloat(cs.fontSize)*.88,des=m.fontBoundingBoxDescent||parseFloat(cs.fontSize)*.12;
+      const rg=document.createRange();
+      for(let i=0;i<t.data.length;i++){const ch=t.data[i];if(!ch.trim())continue;rg.setStart(t,i);rg.setEnd(t,i+1);const q=rg.getClientRects()[0];if(!q)continue;
+        g.fillText(ch,X(q),Y(q)+(q.height-(asc+des))/2+asc)}
+    }
+  }
+  return cv;
+}
 async function pageCanvases(){ // 미리보기 페이지를 A4 한 장씩 고해상도 그림으로
-  if(!window.html2canvas)throw new Error('PDF 만드는 도구를 불러오지 못했어요. 카톡 안 브라우저라면 크롬·삼성인터넷으로 열어 주세요.');
   const lim=(p,ms,msg)=>Promise.race([p,new Promise((ok,no)=>setTimeout(()=>msg?no(new Error(msg)):ok(),ms))]);
   await lim(document.fonts.ready,4000); // 글꼴이 늦으면 기다리지 않고 진행
   const cap=$('#cap'),out=[],pg=$$('#pv .page');
   for(const [n,p] of pg.entries()){
     cap.innerHTML='';const el=p.cloneNode(true);el.style.transform='none';cap.append(el);
     await lim(Promise.all([...el.querySelectorAll('img')].map(im=>im.complete?0:new Promise(r=>{im.onload=im.onerror=r}))),6000);
-    out.push(await lim(html2canvas(el,{scale:2.1,backgroundColor:'#fff',useCORS:true}),45000,`${n+1}쪽 서류 그림을 만들다 멈췄어요. 사진이 너무 크거나 폰 메모리가 부족할 수 있어요. 다른 앱을 닫고 다시 시도하거나 PC에서 보내 주세요.`));
+    let c=null;
+    try{c=await rasterPage(el,2.1)}catch(e){} // 직접 그리기(빠르고 폰에서도 안 멈춤)
+    if(!c){if(!window.html2canvas)throw new Error('PDF 만드는 도구를 불러오지 못했어요. 크롬·삼성인터넷으로 열어 주세요.');c=await lim(html2canvas(el,{scale:2.1,backgroundColor:'#fff',useCORS:true}),45000,`${n+1}쪽 서류 그림을 만들다 멈췄어요. 다른 앱을 닫고 다시 시도하거나 PC에서 보내 주세요.`)}
+    out.push(c);
   }
   cap.innerHTML='';return out;
 }
