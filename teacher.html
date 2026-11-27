@@ -60,6 +60,8 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .dayh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:12px 2px 6px;font-weight:800;font-size:14px;color:var(--gt);border-bottom:2px solid var(--gt);padding-bottom:3px}
 .cpy{font:inherit;font-size:12.5px;font-weight:700;padding:3px 10px;border-radius:999px;border:1px solid var(--gt);background:transparent;color:var(--gt);cursor:pointer}
 .cpy.on{background:var(--gt);color:var(--bg)}
+.seg{gap:0!important;margin-bottom:8px}.seg button{border-radius:0!important;margin-left:-1px;font-weight:700;padding:6px 14px!important}.seg button:first-child{border-radius:999px 0 0 999px!important}.seg button:last-child{border-radius:0 999px 999px 0!important}.seg button.on{background:var(--gt)!important;color:var(--bg)!important;border-color:var(--gt)!important;position:relative}
+.dt{font-size:11.5px;font-weight:800;padding:1px 7px;border-radius:6px;margin-left:4px;vertical-align:2px}.dt.app{background:light-dark(#e3eefc,#1f2f45);color:light-dark(#1d5fb8,#8fbcf5)}.dt.rep{background:light-dark(#f1e6fb,#35244a);color:light-dark(#7b3fb5,#d3a8ff)}
 .nl{margin-top:4px;display:flex;gap:4px;flex-wrap:wrap}
 .nb{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 8px;border-radius:999px;border:1px solid currentColor;white-space:nowrap}
 .nb.nok{color:light-dark(#1e7a46,#7fdca4)}.nb.nmid{color:light-dark(#9a6a00,#f0c35a)}.nb.nno{color:light-dark(#c5221f,#ff8a80)}.nb.nnone{color:var(--mute)}
@@ -117,6 +119,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
   </section>
   <section id="app" hidden>
     <div>
+      <div class="tools seg" id="docSeg"></div>
       <div class="tools tbar"><span id="filters" class="tools" style="margin:0"></span><button id="bRefresh">새로고침</button><button id="bLogout">로그아웃</button><button id="bNeis" title="나이스에서 내려받은 교외체험학습현황 목록 엑셀을 올리면 나이스 처리 상태(완결·상신중·미상신)를 함께 보여 줘요">📥 나이스(교외체험학습현황 목록) 엑셀 업로드</button><input type="file" id="fNeis" accept=".xlsx,.xls" hidden><a id="bCC" href="https://class-calendar-beryl.vercel.app" target="_blank" rel="noopener">📅 쉬운출결 열기</a></div>
       <div id="msg"></div>
       <div id="list"></div>
@@ -142,8 +145,12 @@ async function api(o){
 const SL=s=>s==='승인'?'검토완료':s; // 화면 표시용(시트 값은 '승인' 그대로)
 const badge=s=>`<span class="badge ${s==='승인'?'ok':s==='보완 요청'?'fix':''}">${esc(SL(s))}</span>`;
 const FIL=[['대기','검토 대기',x=>/대기/.test(x.status)],['보완','보완 요청',x=>x.status==='보완 요청'],['승인','검토완료',x=>x.status==='승인'],['전체','전체',()=>true]];
+let DOC=(()=>{try{return localStorage.getItem('jw-tdoc')||'전체'}catch(e){return '전체'}})(); // 서류 구분: 전체 / 신청서 / 결과보고서
+const docOk=x=>DOC==='전체'||x.doc===DOC;
 function drawFilters(){
-  $('#filters').innerHTML=FIL.map(([k,l,f])=>`<button data-f="${k}" class="${filter===k?'on':''}">${l} ${items.filter(f).length}</button>`).join('');
+  const D=items.filter(docOk);
+  $('#filters').innerHTML=FIL.map(([k,l,f])=>`<button data-f="${k}" class="${filter===k?'on':''}">${l} ${D.filter(f).length}</button>`).join('');
+  const seg=$('#docSeg');if(seg)seg.innerHTML=['전체','신청서','결과보고서'].map(k=>`<button data-doc="${k}" class="${DOC===k?'on':''}">${k==='전체'?'📑 서류 전체':k==='신청서'?'📝 신청서':'📘 결과보고서'} ${k==='전체'?items.length:items.filter(x=>x.doc===k).length}</button>`).join('');
 }
 const WDK='일월화수목금토';
 function dayLabel(k){const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(k);if(!m)return k||'날짜 없음';const t=new Date(+m[1],+m[2]-1,+m[3]);return `${+m[2]}/${+m[3]}(${WDK[t.getDay()]})`}
@@ -194,11 +201,11 @@ function neisOf(x){ // 앱 서류 ↔ 나이스 행 (번호+이름+시작일)
 function neisBadge(x){const n=neisOf(x);if(!n)return '';
   const cls={완결:'nok',상신중:'nmid',미상신:'nno',미등록:'nno',없음:'nnone'}[n.st];
   return `<span class="nb ${cls}" title="${esc(n.raw||'')}">나이스 ${n.st==='없음'?'없음':n.st}</span>${n.diff?`<span class="nb nno" title="앱과 나이스 기간이 달라요">⚠ ${esc(n.diff)}</span>`:''}`}
-function neisSummary(){if(!NEIS)return '';const L=items.filter(x=>x.status!=='작성 중'),c={완결:0,상신중:0,미상신:0,미등록:0,없음:0};L.forEach(x=>{const n=neisOf(x);if(n)c[n.st]++});
+function neisSummary(){if(!NEIS)return '';const L=items.filter(docOk).filter(x=>x.status!=='작성 중'),c={완결:0,상신중:0,미상신:0,미등록:0,없음:0};L.forEach(x=>{const n=neisOf(x);if(n)c[n.st]++});
   const app=new Set(L.map(x=>x.num+'|'+pr(x)[0])),only=NEIS.rows.filter(r=>!app.has(r.num+'|'+r.as));
   return `<div class="nsum">📥 나이스(교외체험학습현황 목록) 엑셀 ${esc(NEIS.at)} 업로드 기준 — 완결 ${c.완결} · 상신중 ${c.상신중} · 미상신 ${c.미상신+c.미등록} · 나이스에 없음 ${c.없음}${only.length?` · <b>앱에 없는 나이스 신청 ${only.length}건:</b> ${only.map(r=>`${esc(r.num)}번 ${esc(r.name)}(${mdS(r.as)}~${mdS(r.ae)})`).join(', ')}`:''}</div>`}
 function roster(){ // 요청 날짜별 승인 명단(번호순) — 학생 공지용
-  const G=groupByTerm(items.filter(x=>x.status==='승인'));
+  const G=groupByTerm(items.filter(docOk).filter(x=>x.status==='승인'));
   const txt=G.map(([k,a])=>`[${k}] ${a.length}건\n`+a.map(line).join('\n')).join('\n\n');
   const head=`✅ 교외체험학습 검토완료 명단 (${$('#who').textContent||''})`;
   const ov=document.createElement('div');ov.className='rov';
@@ -218,9 +225,9 @@ function roster(){ // 요청 날짜별 승인 명단(번호순) — 학생 공�
 }
 function drawList(){
   drawFilters();
-  const f=FIL.find(x=>x[0]===filter)[2];let L=items.filter(f);
+  const f=FIL.find(x=>x[0]===filter)[2];let L=items.filter(docOk).filter(f);
   const sp=v=>String(v||'').replace(/(\d{4})-(\d{2})-(\d{2})/g,(m,y,mo,da)=>`${+mo}/${+da}`).replace(/\s*~\s*/,'~');
-  const card=x=>`<button class="it ${cur&&cur.id===x.id?'on':''}" data-id="${esc(x.id)}"><div class="t"><b>${esc(x.num)}번 ${esc(x.name)} <small>${esc(x.doc)}</small></b>${badge(x.status)}</div>
+  const card=x=>`<button class="it ${cur&&cur.id===x.id?'on':''}" data-id="${esc(x.id)}"><div class="t"><b>${esc(x.num)}번 ${esc(x.name)} <span class="dt ${x.doc==='결과보고서'?'rep':'app'}">${x.doc==='결과보고서'?'📘 보고서':'📝 신청서'}</span></b>${badge(x.status)}</div>
     <div class="s" title="${esc(x.period)} · ${esc(x.dest||'')} · 요청 ${esc(x.at)}">${esc(sp(x.period))}${x.dest?` · ${esc(x.dest)}`:''} · 요청 ${esc(sp(String(x.at||'').slice(0,16)))}${x.count>1?` (${esc(x.count)}번째)`:''}</div>${NEIS?`<div class="nl">${neisBadge(x)}</div>`:''}</button>`;
   if(!L.length){$('#list').innerHTML=neisSummary()+'<p class="empty">해당하는 요청이 없어요.</p>';return}
   if(filter==='전체'){const P=x=>/대기/.test(x.status)?0:x.status==='보완 요청'?1:2;L=[...L].sort((a,b)=>P(a)-P(b)||String(b.at).localeCompare(String(a.at)))}
@@ -424,7 +431,7 @@ function doneView(nm,st){ // 처리 후 목록으로 돌아가기
 }
 $('#filters').addEventListener('click',e=>{const f=e.target.closest('[data-f]');if(f){filter=f.dataset.f;drawList()}});
 $('#list').addEventListener('click',e=>{const b=e.target.closest('[data-id]');if(b)open(b.dataset.id)});
-$('#bRefresh').onclick=load;$('#bNeis').onclick=()=>$('#fNeis').click();
+$('#bRefresh').onclick=load;$('#docSeg').onclick=e=>{const b=e.target.closest('[data-doc]');if(!b)return;DOC=b.dataset.doc;try{localStorage.setItem('jw-tdoc',DOC)}catch(err){}drawList()};$('#bNeis').onclick=()=>$('#fNeis').click();
 $('#fNeis').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
   try{say('나이스 엑셀 읽는 중…');const rows=(await readNeis(f)).filter(r=>(!r.grade||r.grade===String(cred.grade))&&(!r.cls||r.cls===String(cred.cls)));
     const d=new Date();NEIS={at:`${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`,file:f.name,rows};
