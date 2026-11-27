@@ -52,7 +52,8 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .dec .btn{min-height:52px;font-size:17px;font-weight:700;padding:10px 26px}
 .dec .btn.ok,.dec .btn.fix{min-width:130px}
 .edlog{margin:0 0 10px;font-size:14px}.edlog pre{white-space:pre-wrap;font:inherit;margin:6px 0 0;padding:8px 10px;border-radius:8px;background:light-dark(#fff6e0,#3a3018)}
-.dayh{margin:12px 2px 6px;font-weight:800;font-size:14px;color:var(--g);border-bottom:2px solid var(--g);padding-bottom:3px}
+.dayh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:12px 2px 6px;font-weight:800;font-size:14px;color:var(--g);border-bottom:2px solid var(--g);padding-bottom:3px}
+.cpy{font:inherit;font-size:12.5px;font-weight:700;padding:3px 10px;border-radius:999px;border:1px solid var(--g);background:transparent;color:var(--g);cursor:pointer}
 .rov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:12px}
 .rbox{background:var(--card,#fff);color:var(--ink,#111);width:min(640px,100%);max-height:88vh;border-radius:14px;display:flex;flex-direction:column}
 .rh{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 14px;border-bottom:1px solid var(--line,#ddd)}
@@ -143,15 +144,19 @@ function termOf(x){const st=startOfP(x);const t=TERMS.find(t=>st>=t.s&&st<=t.e);
 function groupByTerm(L){const order=[...TERMS.map(t=>`${t.n} (${mdS(t.s)}~${mdS(t.e)})`),'자유 기간'],g={};
   L.forEach(x=>{const k=termOf(x);(g[k]=g[k]||[]).push(x)});
   return order.filter(k=>g[k]).map(k=>[k,g[k].sort((a,b)=>(+a.num||0)-(+b.num||0)||startOfP(a).localeCompare(startOfP(b))||String(a.doc).localeCompare(String(b.doc)))])}
+function termText(k,a){const seen=new Set();const L=a.filter(x=>x.doc==='신청서'||!a.some(y=>y.num===x.num&&y.doc==='신청서')).filter(x=>!seen.has(x.num)&&seen.add(x.num));
+  return `✅ ${k} 체험학습 승인 명단 (${L.length}명)\n`+L.map(x=>`${x.num}번 ${x.name}`).join('\n')}
+async function copyText(t,btn){try{await navigator.clipboard.writeText(t)}catch(err){const ta=document.createElement('textarea');ta.value=t;document.body.append(ta);ta.select();document.execCommand('copy');ta.remove()}
+  if(btn){const o=btn.textContent;btn.textContent='복사됨 ✔';setTimeout(()=>btn.textContent=o,1500)}}
 function roster(){ // 요청 날짜별 승인 명단(번호순) — 학생 공지용
   const G=groupByTerm(items.filter(x=>x.status==='승인'));
   const txt=G.map(([k,a])=>`[${k}]\n`+a.map(x=>`${x.num}번 ${x.name} · ${x.doc} · ${String(x.period||'').replace(/(\d{4})-(\d{2})-(\d{2})/g,(m,y,mo,da)=>`${+mo}/${+da}`)}`).join('\n')).join('\n\n');
   const head=`✅ 교외체험학습 승인 명단 (${$('#who').textContent||''})`;
   const ov=document.createElement('div');ov.className='rov';
   ov.innerHTML=`<div class="rbox"><div class="rh"><b>${esc(head)}</b><span><button class="btn" id="rCopy">텍스트 복사</button> <button class="btn" id="rClose">닫기</button></span></div>
-  <div class="rbody">${G.map(([k,a])=>`<h4>${esc(k)} <small>${a.length}건</small></h4><table>${a.map(x=>`<tr><td>${esc(x.num)}번</td><td><b>${esc(x.name)}</b></td><td>${esc(x.doc)}</td><td>${esc(x.period)}</td></tr>`).join('')}</table>`).join('')||'<p>승인된 서류가 없어요.</p>'}</div></div>`;
+  <div class="rbody">${G.map(([k,a],gi)=>`<h4>${esc(k)} <small>${a.length}건</small> <button class="cpy" data-rc="${gi}">📋 이 텀 명단 복사</button></h4><table>${a.map(x=>`<tr><td>${esc(x.num)}번</td><td><b>${esc(x.name)}</b></td><td>${esc(x.doc)}</td><td>${esc(x.period)}</td></tr>`).join('')}</table>`).join('')||'<p>승인된 서류가 없어요.</p>'}</div></div>`;
   document.body.append(ov);
-  ov.onclick=e=>{if(e.target===ov||e.target.id==='rClose')ov.remove()};
+  ov.onclick=e=>{if(e.target===ov||e.target.id==='rClose')ov.remove();const b=e.target.closest('[data-rc]');if(b){const [k,a]=G[+b.dataset.rc];copyText(termText(k,a),b)}};
   ov.querySelector('#rCopy').onclick=async e=>{const t=head+'\n\n'+txt;try{await navigator.clipboard.writeText(t);e.target.textContent='복사됨 ✔'}catch(err){const ta=document.createElement('textarea');ta.value=t;document.body.append(ta);ta.select();document.execCommand('copy');ta.remove();e.target.textContent='복사됨 ✔'}};
 }
 function drawList(){
@@ -163,7 +168,8 @@ function drawList(){
   if(filter==='전체'){const P=x=>/대기/.test(x.status)?0:x.status==='보완 요청'?1:2;L=[...L].sort((a,b)=>P(a)-P(b)||String(b.at).localeCompare(String(a.at)))}
   if(filter!=='승인'){$('#list').innerHTML=L.map(card).join('');return}
   const G=groupByTerm(L);
-  $('#list').innerHTML=`<button class="btn ok" id="bRoster" style="width:100%;margin-bottom:8px">📋 승인 명단 보기 (학생 공지용)</button>`+G.map(([k,a])=>`<div class="dayh">${esc(k)} · ${a.length}건</div>${a.map(card).join('')}`).join('');
+  $('#list').innerHTML=`<button class="btn ok" id="bRoster" style="width:100%;margin-bottom:8px">📋 승인 명단 보기 (학생 공지용)</button>`+G.map(([k,a],gi)=>`<div class="dayh"><span>${esc(k)} · ${a.length}건</span><button class="cpy" data-cpy="${gi}">📋 명단 복사</button></div>${a.map(card).join('')}`).join('');
+  document.querySelectorAll('[data-cpy]').forEach(b=>b.onclick=e=>{e.stopPropagation();const [k,a]=G[+b.dataset.cpy];copyText(termText(k,a),b)});
   $('#bRoster').onclick=roster;
 }
 async function load(){
