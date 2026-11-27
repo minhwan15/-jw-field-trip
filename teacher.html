@@ -59,6 +59,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .edlog{margin:0 0 10px;font-size:14px}.edlog pre{white-space:pre-wrap;font:inherit;margin:6px 0 0;padding:8px 10px;border-radius:8px;background:light-dark(#fff6e0,#3a3018)}
 .dayh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:12px 2px 6px;font-weight:800;font-size:14px;color:var(--gt);border-bottom:2px solid var(--gt);padding-bottom:3px}
 .cpy{font:inherit;font-size:12.5px;font-weight:700;padding:3px 10px;border-radius:999px;border:1px solid var(--gt);background:transparent;color:var(--gt);cursor:pointer}
+.cpy.on{background:var(--gt);color:var(--bg)}
 .nl{margin-top:4px;display:flex;gap:4px;flex-wrap:wrap}
 .nb{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 8px;border-radius:999px;border:1px solid currentColor;white-space:nowrap}
 .nb.nok{color:light-dark(#1e7a46,#7fdca4)}.nb.nmid{color:light-dark(#9a6a00,#f0c35a)}.nb.nno{color:light-dark(#c5221f,#ff8a80)}.nb.nnone{color:var(--mute)}
@@ -163,7 +164,7 @@ async function copyText(t,btn){try{await navigator.clipboard.writeText(t)}catch(
   if(btn){const o=btn.textContent;btn.textContent='복사됨 ✔';setTimeout(()=>btn.textContent=o,1500)}}
 /* ── 나이스 엑셀(교외체험학습 목록) 대조: 완결 / 상신중 / 미상신 ── */
 const nkey=()=>`jw-neis-${cred.grade}-${cred.cls}`;
-let NEIS=null;
+let NEIS=null,NONLY=false; // NONLY: 나이스 없음만 보기
 function loadXLSX(){return window.XLSX?Promise.resolve():new Promise((ok,no)=>{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';sc.onload=ok;sc.onerror=()=>no(new Error('엑셀 읽기 도구를 불러오지 못했어요.'));document.head.append(sc)})}
 const nd=v=>{const m=String(v||'').match(/(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})/);return m?`${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`:''};
 const nrange=v=>{const a=String(v||'').split('~');return [nd(a[0]),nd(a[1]||a[0])]};
@@ -224,8 +225,10 @@ function drawList(){
   if(!L.length){$('#list').innerHTML=neisSummary()+'<p class="empty">해당하는 요청이 없어요.</p>';return}
   if(filter==='전체'){const P=x=>/대기/.test(x.status)?0:x.status==='보완 요청'?1:2;L=[...L].sort((a,b)=>P(a)-P(b)||String(b.at).localeCompare(String(a.at)))}
   if(filter!=='승인'){$('#list').innerHTML=neisSummary()+L.map(card).join('');return}
-  const G=groupByTerm(L);
-  $('#list').innerHTML=neisSummary()+`<button class="btn ok" id="bRoster" style="width:100%;margin-bottom:8px">📋 검토완료 명단 보기 (학생 공지용)</button>`+G.map(([k,a],gi)=>`<div class="dayh"><span>${esc(k)} · ${a.length}건</span><button class="cpy" data-cpy="${gi}">📋 명단 복사</button></div>${a.map(card).join('')}`).join('');
+  const isNone=x=>{const n=neisOf(x);return n&&n.st==='없음'};
+  const G=groupByTerm(NEIS&&NONLY?L.filter(isNone):L);
+  $('#list').innerHTML=neisSummary()+`<button class="btn ok" id="bRoster" style="width:100%;margin-bottom:8px">📋 검토완료 명단 보기 (학생 공지용)</button>`+G.map(([k,a],gi)=>`<div class="dayh"><span>${esc(k)} · ${a.length}건</span><span style="display:flex;gap:6px">${NEIS?`<button class="cpy${NONLY?' on':''}" data-nonly>${NONLY?'✔ 나이스 없음만 보는 중 · 전체 보기':`나이스 없음만 보기 (${a.filter(isNone).length})`}</button>`:''}<button class="cpy" data-cpy="${gi}">📋 명단 복사</button></span></div>${a.map(card).join('')}`).join('');
+  document.querySelectorAll('[data-nonly]').forEach(b=>b.onclick=e=>{e.stopPropagation();NONLY=!NONLY;drawList()});
   document.querySelectorAll('[data-cpy]').forEach(b=>b.onclick=e=>{e.stopPropagation();const [k,a]=G[+b.dataset.cpy];copyText(termText(k,a),b)});
   $('#bRoster').onclick=roster;
 }
@@ -424,7 +427,7 @@ $('#list').addEventListener('click',e=>{const b=e.target.closest('[data-id]');if
 $('#bRefresh').onclick=load;$('#bNeis').onclick=()=>$('#fNeis').click();
 $('#fNeis').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
   try{say('나이스 엑셀 읽는 중…');const rows=(await readNeis(f)).filter(r=>(!r.grade||r.grade===String(cred.grade))&&(!r.cls||r.cls===String(cred.cls)));
-    const d=new Date();NEIS={at:`${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`,rows};
+    const d=new Date();NEIS={at:`${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`,file:f.name,rows};
     try{localStorage.setItem(nkey(),JSON.stringify(NEIS))}catch(err){}drawList();if(cur)open(cur.id);say(`📥 나이스 엑셀 ${rows.length}건을 대조했어요.`)}
   catch(err){say('❌ '+err.message)}};
 $('#back').onclick=()=>{$('#app').classList.remove('showd');window.scrollTo(0,0)};
@@ -432,7 +435,7 @@ $('#bLogout').onclick=()=>{try{sessionStorage.removeItem('jw-t');localStorage.re
 async function login(c){
   $('#lmsg').textContent='확인하는 중…';$('#lmsg').className='';
   try{const j=await api({action:'tlist',...c});cred=c;try{localStorage.setItem('jw-t',JSON.stringify(c))}catch(e){}
-    $('#login').hidden=true;$('#app').hidden=false;items=j.list;$('#who').textContent=j.who;drawList();say(`요청 ${items.length}건`);
+    $('#login').hidden=true;$('#app').hidden=false;items=j.list;$('#who').textContent=j.who;try{NEIS=JSON.parse(localStorage.getItem(nkey())||'null')}catch(e){NEIS=null}drawList();say(`요청 ${items.length}건`);
     const op=new URLSearchParams(location.search).get('open');if(!op){let m='';try{m=sessionStorage.getItem('jw-tmsg')||'';sessionStorage.removeItem('jw-tmsg')}catch(e){}if(m){say(m.split('\n')[0]);const nx=items.find(x=>/대기/.test(x.status));$('#detail').innerHTML=`<p class="tnote">${esc(m)}</p><div class="empty">왼쪽 목록에서 다음 학생을 고르세요.${nx?`<br><button class="btn ok" id="bNext" style="margin-top:14px">다음 검토 대기: ${esc(nx.name)} 열기</button>`:''}</div>`;if(nx)$('#bNext').onclick=()=>open(nx.id)}}if(op&&items.some(x=>x.id===op)){history.replaceState(null,'','teacher.html');await open(op);let m='';try{m=sessionStorage.getItem('jw-tmsg')||'';sessionStorage.removeItem('jw-tmsg')}catch(e){}if(m){say(m);const n=document.createElement('p');n.className='tnote';n.textContent=m;$('#detail').prepend(n)}}}
   catch(e){$('#lmsg').textContent=e.message;$('#lmsg').className='err';$('#login').hidden=false;$('#app').hidden=true}
 }
