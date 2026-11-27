@@ -148,7 +148,7 @@ const mdS=v=>{const m=/^\d{4}-(\d{2})-(\d{2})/.exec(v||'');return m?`${+m[1]}/${
 function termOf(x){const st=startOfP(x);const t=TERMS.find(t=>st>=t.s&&st<=t.e);return t?`${t.n} (${mdS(t.s)}~${mdS(t.e)})`:'자유 기간'}
 function groupByTerm(L){const order=[...TERMS.map(t=>`${t.n} (${mdS(t.s)}~${mdS(t.e)})`),'자유 기간'],g={};
   L.forEach(x=>{const k=termOf(x);(g[k]=g[k]||[]).push(x)});
-  return order.filter(k=>g[k]).map(k=>[k,g[k].sort((a,b)=>(+a.num||0)-(+b.num||0)||startOfP(a).localeCompare(startOfP(b))||String(a.doc).localeCompare(String(b.doc)))])}
+  return [...order.slice(0,-1).reverse(),'자유 기간'].filter(k=>g[k]).map(k=>[k,g[k].sort((a,b)=>(+a.num||0)-(+b.num||0)||startOfP(a).localeCompare(startOfP(b))||String(a.doc).localeCompare(String(b.doc)))])}
 function termText(k,a){const seen=new Set();const L=a.filter(x=>x.doc==='신청서'||!a.some(y=>y.num===x.num&&y.doc==='신청서')).filter(x=>!seen.has(x.num)&&seen.add(x.num));
   return `✅ ${k} 체험학습 승인 명단 (${L.length}명)\n`+L.map(x=>`${x.num}번 ${x.name}`).join('\n')}
 async function copyText(t,btn){try{await navigator.clipboard.writeText(t)}catch(err){const ta=document.createElement('textarea');ta.value=t;document.body.append(ta);ta.select();document.execCommand('copy');ta.remove()}

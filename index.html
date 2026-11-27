@@ -154,6 +154,7 @@ input[readonly]{background:light-dark(#f0f3f1,#1a201d);color:var(--mute)}
 .pitem:disabled{opacity:.45;cursor:default}.pitem em{font-style:normal;font-size:12px;color:var(--mute)}
 .pchk{flex:0 0 20px;color:#1a73e8;font-weight:900}.pitem.cur{color:#1a73e8;font-weight:700}
 .pdup{color:var(--warn);font-size:13px;font-weight:700;margin-top:4px}
+.pref{font-size:13px;color:var(--mute);background:light-dark(#f1f5f3,#232a26);border-left:3px solid var(--gt);border-radius:6px;padding:6px 9px;margin:4px 0 6px}.pref b{color:var(--ink);font-weight:600}
 .pwnote{margin:6px 0 14px;padding:10px 12px;border-radius:10px;border:2px solid #d93025;background:light-dark(#fdecea,#3a1513);color:light-dark(#c5221f,#ff8a80);font-size:14px;line-height:1.55;font-weight:500}.pwnote b{font-weight:800}
 .chips{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}.chips button{font:inherit;font-size:13px;padding:4px 9px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}.chips button.on{background:var(--g);color:#fff;border-color:var(--g)}
 .meter{display:flex;align-items:center;gap:8px;font-size:13px;color:#c0682a;margin:4px 0 2px;font-weight:500}.meter b{font-size:15px}
@@ -429,7 +430,7 @@ function buildDays(){
   const days=rows(),n=nRows();
   const PLAN_EX=['예) 전주 한옥마을 탐방 후 전통 음식(비빔밥) 만들기 체험','예) 조부모님 댁 방문, 김장 일손 돕기와 지역 전통시장 둘러보기','예) 국립중앙박물관 견학, 관심 있는 시대 유물 정리하기','예) 제주 오름 트레킹과 해녀박물관에서 지역 생활 문화 알아보기','예) 진학 희망 대학 캠퍼스 투어 후 학과 안내 자료 정리하기'];
   $('#plans').innerHTML=Array.from({length:n},(_,i)=>`<div class="day"><b>${i+1}일차 ${days[i]?`· ${md(days[i])}(${WD[days[i].getDay()]})`:''}</b><button type="button" class="psel" data-psel="${i}">📋 추천 일정에서 고르기 <small>(직접 써도 돼요)</small></button><textarea data-plan="${i}" rows="2" placeholder="${PLAN_EX[i%PLAN_EX.length]}"></textarea><div class="pdup" data-pdup="${i}" hidden>⚠️ 다른 날과 같은 일정이에요. 날마다 다르게 써 주세요.</div></div>`).join('');
-  $('#reps').innerHTML=Array.from({length:n},(_,i)=>`<div class="day"><b>${i+1}일차 ${days[i]?`· ${md(days[i])}(${WD[days[i].getDay()]})`:''}</b><textarea data-rep="${i}" rows="6" placeholder="느낀 점, 배운 점 — 아래 %가 90% 이상 되게 (이 입력칸으로는 약 7~8줄)"></textarea><div class="meter" data-meter="${i}"></div>
+  $('#reps').innerHTML=Array.from({length:n},(_,i)=>`<div class="day"><b>${i+1}일차 ${days[i]?`· ${md(days[i])}(${WD[days[i].getDay()]})`:''}</b>${(d.plans||[])[i]&&String(d.plans[i]).trim()?`<div class="pref">📋 신청서에 쓴 계획: <b>${esc(d.plans[i])}</b></div>`:''}<textarea data-rep="${i}" rows="6" placeholder="느낀 점, 배운 점 — 아래 %가 90% 이상 되게 (이 입력칸으로는 약 7~8줄)"></textarea><div class="meter" data-meter="${i}"></div>
     <div class="photo"><img alt="" ${photos[i]?`src="${photos[i]}"`:'hidden'}><input type="file" accept="image/*" data-ph="${i}"><button class="btn s" type="button" data-phx="${i}" ${photos[i]?'':'hidden'}>삭제</button></div></div>`).join('');
   $$('[data-plan]').forEach(t=>t.value=d.plans[+t.dataset.plan]||'');planSync();
   $$('[data-rep]').forEach(t=>{t.value=d.reps[+t.dataset.rep]||'';repMeter(+t.dataset.rep)});
