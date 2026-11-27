@@ -58,6 +58,10 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .edlog{margin:0 0 10px;font-size:14px}.edlog pre{white-space:pre-wrap;font:inherit;margin:6px 0 0;padding:8px 10px;border-radius:8px;background:light-dark(#fff6e0,#3a3018)}
 .dayh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:12px 2px 6px;font-weight:800;font-size:14px;color:var(--gt);border-bottom:2px solid var(--gt);padding-bottom:3px}
 .cpy{font:inherit;font-size:12.5px;font-weight:700;padding:3px 10px;border-radius:999px;border:1px solid var(--gt);background:transparent;color:var(--gt);cursor:pointer}
+.nl{margin-top:4px;display:flex;gap:4px;flex-wrap:wrap}
+.nb{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 8px;border-radius:999px;border:1px solid currentColor;white-space:nowrap}
+.nb.nok{color:light-dark(#1e7a46,#7fdca4)}.nb.nmid{color:light-dark(#9a6a00,#f0c35a)}.nb.nno{color:light-dark(#c5221f,#ff8a80)}.nb.nnone{color:var(--mute)}
+.nsum{grid-column:1/-1;font-size:13px;color:var(--mute);background:var(--card);border:1px dashed var(--line);border-radius:10px;padding:7px 10px}
 .rov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:12px}
 .rbox{background:var(--card,#fff);color:var(--ink,#111);width:min(640px,100%);max-height:88vh;border-radius:14px;display:flex;flex-direction:column}
 .rh{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 14px;border-bottom:1px solid var(--line,#ddd)}
@@ -111,7 +115,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
   </section>
   <section id="app" hidden>
     <div>
-      <div class="tools tbar"><span id="filters" class="tools" style="margin:0"></span><button id="bRefresh">새로고침</button><button id="bLogout">로그아웃</button><a id="bCC" href="https://class-calendar-beryl.vercel.app" target="_blank" rel="noopener">📅 쉬운출결 열기</a></div>
+      <div class="tools tbar"><span id="filters" class="tools" style="margin:0"></span><button id="bRefresh">새로고침</button><button id="bLogout">로그아웃</button><button id="bNeis" title="나이스 교외체험학습 목록 엑셀을 올리면 나이스 처리 상태를 함께 보여 줘요">📥 나이스 엑셀</button><input type="file" id="fNeis" accept=".xlsx,.xls" hidden><a id="bCC" href="https://class-calendar-beryl.vercel.app" target="_blank" rel="noopener">📅 쉬운출결 열기</a></div>
       <div id="msg"></div>
       <div id="list"></div>
     </div>
@@ -133,8 +137,9 @@ async function api(o){
   let r;for(let k=0;;k++){try{r=await fetch(API,{method:'POST',body:JSON.stringify(o)});break}catch(e){if(k>=1)throw new Error('서버에 연결하지 못했어요. 인터넷(와이파이·데이터) 연결을 확인하고 다시 눌러 주세요.');await new Promise(z=>setTimeout(z,1500))}}
   let j;try{j=await r.json()}catch(e){throw new Error('서버 응답을 읽지 못했어요. 잠시 후 다시 시도하세요.')}if(!j.ok)throw new Error(j.msg||'요청 실패');return j;
 }
-const badge=s=>`<span class="badge ${s==='승인'?'ok':s==='보완 요청'?'fix':''}">${esc(s)}</span>`;
-const FIL=[['대기','검토 대기',x=>/대기/.test(x.status)],['보완','보완 요청',x=>x.status==='보완 요청'],['승인','승인',x=>x.status==='승인'],['전체','전체',()=>true]];
+const SL=s=>s==='승인'?'검토완료':s; // 화면 표시용(시트 값은 '승인' 그대로)
+const badge=s=>`<span class="badge ${s==='승인'?'ok':s==='보완 요청'?'fix':''}">${esc(SL(s))}</span>`;
+const FIL=[['대기','검토 대기',x=>/대기/.test(x.status)],['보완','보완 요청',x=>x.status==='보완 요청'],['승인','검토완료',x=>x.status==='승인'],['전체','전체',()=>true]];
 function drawFilters(){
   $('#filters').innerHTML=FIL.map(([k,l,f])=>`<button data-f="${k}" class="${filter===k?'on':''}">${l} ${items.filter(f).length}</button>`).join('');
 }
@@ -150,16 +155,51 @@ function groupByTerm(L){const order=[...TERMS.map(t=>`${t.n} (${mdS(t.s)}~${mdS(
   L.forEach(x=>{const k=termOf(x);(g[k]=g[k]||[]).push(x)});
   return [...order.slice(0,-1).reverse(),'자유 기간'].filter(k=>g[k]).map(k=>[k,g[k].sort((a,b)=>(+a.num||0)-(+b.num||0)||startOfP(a).localeCompare(startOfP(b))||String(a.doc).localeCompare(String(b.doc)))])}
 function termText(k,a){const seen=new Set();const L=a.filter(x=>x.doc==='신청서'||!a.some(y=>y.num===x.num&&y.doc==='신청서')).filter(x=>!seen.has(x.num)&&seen.add(x.num));
-  return `✅ ${k} 체험학습 승인 명단 (${L.length}명)\n`+L.map(x=>`${x.num}번 ${x.name}`).join('\n')}
+  return `✅ ${k} 체험학습 검토완료 명단 (${L.length}명)\n`+L.map(x=>`${x.num}번 ${x.name}`).join('\n')}
 async function copyText(t,btn){try{await navigator.clipboard.writeText(t)}catch(err){const ta=document.createElement('textarea');ta.value=t;document.body.append(ta);ta.select();document.execCommand('copy');ta.remove()}
   if(btn){const o=btn.textContent;btn.textContent='복사됨 ✔';setTimeout(()=>btn.textContent=o,1500)}}
+/* ── 나이스 엑셀(교외체험학습 목록) 대조: 완결 / 상신중 / 미상신 ── */
+const nkey=()=>`jw-neis-${cred.grade}-${cred.cls}`;
+let NEIS=null;
+function loadXLSX(){return window.XLSX?Promise.resolve():new Promise((ok,no)=>{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';sc.onload=ok;sc.onerror=()=>no(new Error('엑셀 읽기 도구를 불러오지 못했어요.'));document.head.append(sc)})}
+const nd=v=>{const m=String(v||'').match(/(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})/);return m?`${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`:''};
+const nrange=v=>{const a=String(v||'').split('~');return [nd(a[0]),nd(a[1]||a[0])]};
+async function readNeis(file){
+  await loadXLSX();
+  const wb=XLSX.read(await file.arrayBuffer(),{type:'array'}),out=[];
+  for(const nm of wb.SheetNames){const A=XLSX.utils.sheet_to_json(wb.Sheets[nm],{header:1,defval:''});
+    const hi=A.findIndex(r=>r.some(c=>String(c).includes('신청서 진행상태')));if(hi<0)continue;
+    const H=A[hi].map(c=>String(c).trim()),ix=k=>H.findIndex(h=>h===k);
+    const c={as:ix('신청서 진행상태'),rs:ix('보고서 진행상태'),g:ix('학년'),c:ix('반'),n:ix('번호'),nm:ix('성명'),ap:ix('신청서 체험기간'),rp:ix('보고서 체험기간')};
+    for(const r of A.slice(hi+1)){const num=String(r[c.n]).replace(/\.0+$/,'').trim();if(!num||!r[c.nm])continue;
+      const [as,ae]=nrange(r[c.ap]),[rs,re]=nrange(r[c.rp]);
+      out.push({grade:String(r[c.g]).trim(),cls:String(r[c.c]).trim(),num,name:String(r[c.nm]).trim(),as,ae,ast:[r[c.as],r[c.as+1]].map(v=>String(v||'').trim()).filter(Boolean),rs,re,rst:c.rs>=0?[r[c.rs],r[c.rs+1]].map(v=>String(v||'').trim()).filter(Boolean):[]})}}
+  if(!out.length)throw new Error('나이스 교외체험학습 목록 엑셀이 맞는지 확인해 주세요. (\'신청서 진행상태\' 열을 찾지 못했어요)');
+  return out;
+}
+const pr=x=>{const m=String(x.period||'').match(/\d{4}-\d{2}-\d{2}/g)||[];return [m[0]||'',m[1]||m[0]||'']};
+function neisOf(x){ // 앱 서류 ↔ 나이스 행 (번호+이름+시작일)
+  if(!NEIS)return null;const [s,e]=pr(x),rep=x.doc==='결과보고서';
+  const r=NEIS.rows.find(r=>r.num===String(x.num)&&r.name.replace(/\s/g,'')===String(x.name).replace(/\s/g,'')&&r.as===s);
+  if(!r)return {st:'없음'};
+  const S=(rep?r.rst:r.ast).join(' ');
+  const st=!S?'미등록':/완결/.test(S)?'완결':/상신/.test(S)&&!/미상신/.test(S)?'상신중':'미상신';
+  const ne=rep?(r.re||r.ae):r.ae;
+  return {st,raw:S,diff:ne&&e&&ne!==e?`나이스 기간 ${mdS(r.as)}~${mdS(ne)}`:''};
+}
+function neisBadge(x){const n=neisOf(x);if(!n)return '';
+  const cls={완결:'nok',상신중:'nmid',미상신:'nno',미등록:'nno',없음:'nnone'}[n.st];
+  return `<span class="nb ${cls}" title="${esc(n.raw||'')}">나이스 ${n.st==='없음'?'없음':n.st}</span>${n.diff?`<span class="nb nno" title="앱과 나이스 기간이 달라요">⚠ ${esc(n.diff)}</span>`:''}`}
+function neisSummary(){if(!NEIS)return '';const L=items.filter(x=>x.status!=='작성 중'),c={완결:0,상신중:0,미상신:0,미등록:0,없음:0};L.forEach(x=>{const n=neisOf(x);if(n)c[n.st]++});
+  const app=new Set(L.map(x=>x.num+'|'+pr(x)[0])),only=NEIS.rows.filter(r=>!app.has(r.num+'|'+r.as));
+  return `<div class="nsum">📥 나이스 엑셀(${esc(NEIS.at)}) 대조 — 완결 ${c.완결} · 상신중 ${c.상신중} · 미상신 ${c.미상신+c.미등록} · 나이스에 없음 ${c.없음}${only.length?` · <span title="${esc(only.map(r=>r.num+'번 '+r.name+' '+r.as).join(', '))}">앱에 없는 나이스 신청 ${only.length}건</span>`:''}</div>`}
 function roster(){ // 요청 날짜별 승인 명단(번호순) — 학생 공지용
   const G=groupByTerm(items.filter(x=>x.status==='승인'));
   const txt=G.map(([k,a])=>`[${k}]\n`+a.map(x=>`${x.num}번 ${x.name} · ${x.doc} · ${String(x.period||'').replace(/(\d{4})-(\d{2})-(\d{2})/g,(m,y,mo,da)=>`${+mo}/${+da}`)}`).join('\n')).join('\n\n');
-  const head=`✅ 교외체험학습 승인 명단 (${$('#who').textContent||''})`;
+  const head=`✅ 교외체험학습 검토완료 명단 (${$('#who').textContent||''})`;
   const ov=document.createElement('div');ov.className='rov';
   ov.innerHTML=`<div class="rbox"><div class="rh"><b>${esc(head)}</b><span><button class="btn" id="rCopy">텍스트 복사</button> <button class="btn" id="rClose">닫기</button></span></div>
-  <div class="rbody">${G.map(([k,a],gi)=>`<h4>${esc(k)} <small>${a.length}건</small> <button class="cpy" data-rc="${gi}">📋 이 텀 명단 복사</button></h4><table>${a.map(x=>`<tr><td>${esc(x.num)}번</td><td><b>${esc(x.name)}</b></td><td>${esc(x.doc)}</td><td>${esc(x.period)}</td></tr>`).join('')}</table>`).join('')||'<p>승인된 서류가 없어요.</p>'}</div></div>`;
+  <div class="rbody">${G.map(([k,a],gi)=>`<h4>${esc(k)} <small>${a.length}건</small> <button class="cpy" data-rc="${gi}">📋 이 텀 명단 복사</button></h4><table>${a.map(x=>`<tr><td>${esc(x.num)}번</td><td><b>${esc(x.name)}</b></td><td>${esc(x.doc)}</td><td>${esc(x.period)}</td></tr>`).join('')}</table>`).join('')||'<p>검토완료된 서류가 없어요.</p>'}</div></div>`;
   document.body.append(ov);
   ov.onclick=e=>{if(e.target===ov||e.target.id==='rClose')ov.remove();const b=e.target.closest('[data-rc]');if(b){const [k,a]=G[+b.dataset.rc];copyText(termText(k,a),b)}};
   ov.querySelector('#rCopy').onclick=async e=>{const t=head+'\n\n'+txt;try{await navigator.clipboard.writeText(t);e.target.textContent='복사됨 ✔'}catch(err){const ta=document.createElement('textarea');ta.value=t;document.body.append(ta);ta.select();document.execCommand('copy');ta.remove();e.target.textContent='복사됨 ✔'}};
@@ -169,18 +209,18 @@ function drawList(){
   const f=FIL.find(x=>x[0]===filter)[2];let L=items.filter(f);
   const sp=v=>String(v||'').replace(/(\d{4})-(\d{2})-(\d{2})/g,(m,y,mo,da)=>`${+mo}/${+da}`).replace(/\s*~\s*/,'~');
   const card=x=>`<button class="it ${cur&&cur.id===x.id?'on':''}" data-id="${esc(x.id)}"><div class="t"><b>${esc(x.num)}번 ${esc(x.name)} <small>${esc(x.doc)}</small></b>${badge(x.status)}</div>
-    <div class="s" title="${esc(x.period)} · ${esc(x.dest||'')} · 요청 ${esc(x.at)}">${esc(sp(x.period))}${x.dest?` · ${esc(x.dest)}`:''} · 요청 ${esc(sp(String(x.at||'').slice(0,16)))}${x.count>1?` (${esc(x.count)}번째)`:''}</div></button>`;
-  if(!L.length){$('#list').innerHTML='<p class="empty">해당하는 요청이 없어요.</p>';return}
+    <div class="s" title="${esc(x.period)} · ${esc(x.dest||'')} · 요청 ${esc(x.at)}">${esc(sp(x.period))}${x.dest?` · ${esc(x.dest)}`:''} · 요청 ${esc(sp(String(x.at||'').slice(0,16)))}${x.count>1?` (${esc(x.count)}번째)`:''}</div>${NEIS?`<div class="nl">${neisBadge(x)}</div>`:''}</button>`;
+  if(!L.length){$('#list').innerHTML=neisSummary()+'<p class="empty">해당하는 요청이 없어요.</p>';return}
   if(filter==='전체'){const P=x=>/대기/.test(x.status)?0:x.status==='보완 요청'?1:2;L=[...L].sort((a,b)=>P(a)-P(b)||String(b.at).localeCompare(String(a.at)))}
-  if(filter!=='승인'){$('#list').innerHTML=L.map(card).join('');return}
+  if(filter!=='승인'){$('#list').innerHTML=neisSummary()+L.map(card).join('');return}
   const G=groupByTerm(L);
-  $('#list').innerHTML=`<button class="btn ok" id="bRoster" style="width:100%;margin-bottom:8px">📋 승인 명단 보기 (학생 공지용)</button>`+G.map(([k,a],gi)=>`<div class="dayh"><span>${esc(k)} · ${a.length}건</span><button class="cpy" data-cpy="${gi}">📋 명단 복사</button></div>${a.map(card).join('')}`).join('');
+  $('#list').innerHTML=neisSummary()+`<button class="btn ok" id="bRoster" style="width:100%;margin-bottom:8px">📋 검토완료 명단 보기 (학생 공지용)</button>`+G.map(([k,a],gi)=>`<div class="dayh"><span>${esc(k)} · ${a.length}건</span><button class="cpy" data-cpy="${gi}">📋 명단 복사</button></div>${a.map(card).join('')}`).join('');
   document.querySelectorAll('[data-cpy]').forEach(b=>b.onclick=e=>{e.stopPropagation();const [k,a]=G[+b.dataset.cpy];copyText(termText(k,a),b)});
   $('#bRoster').onclick=roster;
 }
 async function load(){
   say('불러오는 중…');
-  try{const j=await api({action:'tlist',...cred});items=j.list;$('#who').textContent=j.who;drawList();say(`요청 ${items.length}건`)}
+  try{const j=await api({action:'tlist',...cred});items=j.list;$('#who').textContent=j.who;try{NEIS=JSON.parse(localStorage.getItem(nkey())||'null')}catch(e){NEIS=null}drawList();say(`요청 ${items.length}건`)}
   catch(e){say(e.message,true)}
 }
 async function open(id){
@@ -192,13 +232,13 @@ async function open(id){
     if(j.pdf){const b=Uint8Array.from(atob(j.pdf),c=>c.charCodeAt(0));pdfUrl=URL.createObjectURL(new Blob([b],{type:'application/pdf'}))}
     const fn=`${cur.doc}_${cur.grade}-${cur.cls}-${cur.num}_${cur.name}.pdf`;
     $('#detail').innerHTML=`<div class="head"><div><h2>${esc(cur.grade)}-${esc(cur.cls)} ${esc(cur.num)}번 ${esc(cur.name)} · ${esc(cur.doc)}</h2>
-      <div style="font-size:14px;color:var(--mute)">${esc(cur.period)}${cur.dest?` · ${esc(cur.dest)}`:''} · 요청 ${esc(cur.at)}</div></div><div class="topdec">${badge(cur.status)}<button class="btn ok${cur.status==='승인'?' done':''}" id="bOk2">${cur.status==='승인'?'✔ 승인됨 · 다시 전송':'✔ 승인 및 쉬운출결앱으로 전송'}</button><button class="btn fix" id="bFix2">보완 요청 쓰기</button><button class="btn" id="bEdit">✏️ 내용 직접 수정</button><button class="btn" id="bPin">🔑 비밀번호 초기화</button><button class="btn del" id="bDel">🗑 삭제</button></div></div>
+      <div style="font-size:14px;color:var(--mute)">${esc(cur.period)}${cur.dest?` · ${esc(cur.dest)}`:''} · 요청 ${esc(cur.at)}</div></div><div class="topdec">${badge(cur.status)}${NEIS?neisBadge(cur):''}<button class="btn ok${cur.status==='승인'?' done':''}" id="bOk2">${cur.status==='승인'?'✔ 검토완료됨 · 다시 전송':'✔ 검토완료 및 쉬운출결앱으로 전송'}</button><button class="btn fix" id="bFix2">보완 요청 쓰기</button><button class="btn" id="bEdit">✏️ 내용 직접 수정</button><button class="btn" id="bPin">🔑 비밀번호 초기화</button><button class="btn del" id="bDel">🗑 삭제</button></div></div>
       ${cur.edits?`<details class="edlog"><summary>✏️ 담임 수정 내역 (학생에게도 보여요)</summary><pre>${esc(cur.edits)}</pre></details>`:''}<div class="audit" id="audit"><h3>🖍 자동 점검 <span><button class="btn" id="bAudit" style="min-height:36px;padding:4px 10px">다시 점검</button> <button class="btn" id="bHl" style="min-height:36px;padding:4px 10px">형광펜 끄기</button></span></h3><div id="auditBody">점검하는 중…</div></div>
       <div id="pages">${pdfUrl?'':'<p class="empty">PDF를 찾을 수 없어요.</p>'}</div>
       ${pdfUrl?`<div class="tools" style="margin-top:8px"><a class="btn" href="${pdfUrl}" target="_blank" rel="noopener">PDF 새 창에서 보기</a><a class="btn" href="${pdfUrl}" download="${esc(fn)}">PDF 내려받기</a></div>`:''}
       ${cur.comment?`<div class="prev"><b>이전에 보낸 보완 사항</b>\n${esc(cur.comment)}</div>`:''}
-      <label style="margin-top:12px">보완 사항 (보완 요청할 때 필수, 승인·전송할 때는 선택)<textarea id="cm" placeholder="예) 2일차 학습계획을 구체적으로 적어 주세요. 보호자 서명이 빠졌어요."></textarea></label>
-      <div style="margin-top:8px"><button class="btn" id="bPut">자동 점검 결과를 보완 사항에 넣기</button></div><div class="dec"><button class="btn ok${cur.status==='승인'?' done':''}" id="bOk">${cur.status==='승인'?'✔ 승인됨 · 다시 전송':'✔ 승인 및 쉬운출결앱으로 전송'}</button><button class="btn fix" id="bFix">보완 요청 보내기</button></div>`;
+      <label style="margin-top:12px">보완 사항 (보완 요청할 때 필수, 검토완료할 때는 선택)<textarea id="cm" placeholder="예) 2일차 학습계획을 구체적으로 적어 주세요. 보호자 서명이 빠졌어요."></textarea></label>
+      <div style="margin-top:8px"><button class="btn" id="bPut">자동 점검 결과를 보완 사항에 넣기</button></div><div class="dec"><button class="btn ok${cur.status==='승인'?' done':''}" id="bOk">${cur.status==='승인'?'✔ 검토완료됨 · 다시 전송':'✔ 검토완료 및 쉬운출결앱으로 전송'}</button><button class="btn fix" id="bFix">보완 요청 보내기</button></div>`;
     curData=j.data||{};pdfBytes=j.pdf?Uint8Array.from(atob(j.pdf),c=>c.charCodeAt(0)):null;
     $('#bAudit').onclick=()=>runAudit();
     $('#bHl').onclick=e=>{const off=$('#pages').classList.toggle('nohl');e.target.textContent=off?'형광펜 켜기':'형광펜 끄기'};
@@ -331,15 +371,15 @@ function runAudit(){
     Object.assign(h.style,{left:rect[0]/595.28*100+'%',top:rect[1]/841.89*100+'%',width:(rect[2]-rect[0])/595.28*100+'%',height:(rect[3]-rect[1])/841.89*100+'%'});
     pe.w.append(h);}));
   const ne=R.filter(r=>r.lv==='e').length,nw=R.filter(r=>r.lv==='w').length,ni=R.length-ne-nw;
-  $('#auditBody').innerHTML=!R.length?'<p class="okmsg">자동 점검에서 걸린 항목이 없어요. 서명·내용만 눈으로 확인하고 승인하세요.</p>'
+  $('#auditBody').innerHTML=!R.length?'<p class="okmsg">자동 점검에서 걸린 항목이 없어요. 서명·내용만 눈으로 확인하고 검토완료하세요.</p>'
     :`<p style="margin:0 0 6px;font-size:14px">오류 <b style="color:#d7261e">${ne}</b> · 확인 <b style="color:#d99a1e">${nw}</b>${ni?` · 참고 ${ni}`:''} <span style="color:var(--mute)">(항목을 누르면 해당 위치로 이동)</span></p><ul>${R.map((r,i)=>`<li class="${r.lv}" data-ri="${i}"><b>${r.lv==='e'?'오류':r.lv==='w'?'확인':'참고'}</b><span>${esc(r.m)}</span></li>`).join('')}</ul>`;
 }
 document.addEventListener('click',e=>{const li=e.target.closest('.audit li[data-ri]');if(!li)return;const h=document.querySelector(`.hl[data-ri="${li.dataset.ri}"]`);if(h){$('#pages').classList.remove('nohl');h.scrollIntoView({behavior:'smooth',block:'center'});h.classList.remove('flash');void h.offsetWidth;h.classList.add('flash')}});
 function syncMsg(x){ // 쉬운출결 전송 결과를 쉬운출결 안 쓰는 선생님도 알아보게
   if(!x||x.off)return '';const m=String(x.msg||'');
   if(x.ok)return ' · ✔ 쉬운출결 앱에도 전송했어요';
-  if(/만들어지지 않았|로그인해/.test(m))return ' · (쉬운출결 앱을 쓰지 않는 반이라 쉬운출결 전송은 건너뛰었어요. 승인은 정상 완료)';
-  return ' · ⚠️ 쉬운출결 앱 전송 실패('+m.replace(/^(기록함 등록|쉬운출결 전송) 실패:\s*/,'').replace(/기록함/g,'쉬운출결')+'). 승인은 정상 완료';
+  if(/만들어지지 않았|로그인해/.test(m))return ' · (쉬운출결 앱을 쓰지 않는 반이라 쉬운출결 전송은 건너뛰었어요. 검토완료는 정상 처리)';
+  return ' · ⚠️ 쉬운출결 앱 전송 실패('+m.replace(/^(기록함 등록|쉬운출결 전송) 실패:\s*/,'').replace(/기록함/g,'쉬운출결')+'). 검토완료는 정상 처리';
 }
 async function resetPin(){
   const x=cur;if(!x)return;
@@ -359,18 +399,23 @@ async function review(st){
   const cm=$('#cm').value.trim();
   if(st==='보완 요청'&&!cm){$('#cm').focus();say('보완할 내용을 적어 주세요.',true);return}
   $('#bOk').disabled=$('#bFix').disabled=$('#bOk2').disabled=true;say('저장하는 중…');
-  try{const rv=await api({action:'treview',...cred,id:cur.id,status:st,comment:cm});const nm=cur.name;cur=null;await load();doneView(nm,st);const sy=syncMsg(rv.sync);say(`${nm} 학생: ${st} 처리했어요${sy}. 학생은 내 보관함에서 확인합니다.`,rv.sync&&!rv.sync.ok&&!rv.sync.off)}
+  try{const rv=await api({action:'treview',...cred,id:cur.id,status:st,comment:cm});const nm=cur.name;cur=null;await load();doneView(nm,st);const sy=syncMsg(rv.sync);say(`${nm} 학생: ${SL(st)} 처리했어요${sy}. 학생은 내 보관함에서 확인합니다.`,rv.sync&&!rv.sync.ok&&!rv.sync.off)}
   catch(e){say(e.message,true);$('#bOk').disabled=$('#bFix').disabled=$('#bOk2').disabled=false}
 }
 function doneView(nm,st){ // 처리 후 목록으로 돌아가기
   $('#app').classList.remove('showd');window.scrollTo(0,0);
   const nx=items.find(x=>/대기/.test(x.status));
-  $('#detail').innerHTML=`<div class="empty"><div style="font-size:40px">${st==='승인'?'✅':'📝'}</div><b style="font-size:18px;color:var(--ink)">${esc(nm)} 학생 ${esc(st)} 완료</b><br>왼쪽 목록에서 다음 학생을 고르세요.${nx?`<br><button class="btn ok" id="bNext" style="margin-top:14px">다음 검토 대기: ${esc(nx.name)} 열기</button>`:''}</div>`;
+  $('#detail').innerHTML=`<div class="empty"><div style="font-size:40px">${st==='승인'?'✅':'📝'}</div><b style="font-size:18px;color:var(--ink)">${esc(nm)} 학생 ${esc(st==='승인'?'검토완료':st)} 처리됨</b><br>왼쪽 목록에서 다음 학생을 고르세요.${nx?`<br><button class="btn ok" id="bNext" style="margin-top:14px">다음 검토 대기: ${esc(nx.name)} 열기</button>`:''}</div>`;
   if(nx)$('#bNext').onclick=()=>open(nx.id);
 }
 $('#filters').addEventListener('click',e=>{const f=e.target.closest('[data-f]');if(f){filter=f.dataset.f;drawList()}});
 $('#list').addEventListener('click',e=>{const b=e.target.closest('[data-id]');if(b)open(b.dataset.id)});
-$('#bRefresh').onclick=load;
+$('#bRefresh').onclick=load;$('#bNeis').onclick=()=>$('#fNeis').click();
+$('#fNeis').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
+  try{say('나이스 엑셀 읽는 중…');const rows=(await readNeis(f)).filter(r=>(!r.grade||r.grade===String(cred.grade))&&(!r.cls||r.cls===String(cred.cls)));
+    const d=new Date();NEIS={at:`${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`,rows};
+    try{localStorage.setItem(nkey(),JSON.stringify(NEIS))}catch(err){}drawList();if(cur)open(cur.id);say(`📥 나이스 엑셀 ${rows.length}건을 대조했어요.`)}
+  catch(err){say('❌ '+err.message)}};
 $('#back').onclick=()=>{$('#app').classList.remove('showd');window.scrollTo(0,0)};
 $('#bLogout').onclick=()=>{try{sessionStorage.removeItem('jw-t');localStorage.removeItem('jw-t')}catch(e){}location.href='./'};
 async function login(c){

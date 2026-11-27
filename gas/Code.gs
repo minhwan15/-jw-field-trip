@@ -186,7 +186,7 @@ function mine_(b) { // 학생: 보낸 신청 내용을 작성칸으로 다시 �
 function mypdf_(b) { // 학생: 담임이 승인한 서류 PDF(서명·사진 포함, 제출 당시 그대로) 받기
   const r = myRows_(b).filter(x => x[C['ID']] === str_(b.id, 80))[0];
   if (!r) throw new Error('서류를 찾을 수 없습니다.');
-  if (r[C['상태']] !== '승인') throw new Error('담임 선생님이 승인한 뒤에 저장할 수 있어요.');
+  if (r[C['상태']] !== '승인') throw new Error('담임 선생님이 검토완료한 뒤에 저장할 수 있어요.');
   let pdf = '';
   try { pdf = Utilities.base64Encode(DriveApp.getFileById(r[C['PDF파일ID']]).getBlob().getBytes()); } catch (e) { throw new Error('서류 파일을 찾을 수 없습니다. 담임 선생님께 문의하세요.'); }
   return { ok: true, item: pub_(r), pdf: pdf };
