@@ -196,7 +196,7 @@ function neisBadge(x){const n=neisOf(x);if(!n)return '';
   return `<span class="nb ${cls}" title="${esc(n.raw||'')}">나이스 ${n.st==='없음'?'없음':n.st}</span>${n.diff?`<span class="nb nno" title="앱과 나이스 기간이 달라요">⚠ ${esc(n.diff)}</span>`:''}`}
 function neisSummary(){if(!NEIS)return '';const L=items.filter(x=>x.status!=='작성 중'),c={완결:0,상신중:0,미상신:0,미등록:0,없음:0};L.forEach(x=>{const n=neisOf(x);if(n)c[n.st]++});
   const app=new Set(L.map(x=>x.num+'|'+pr(x)[0])),only=NEIS.rows.filter(r=>!app.has(r.num+'|'+r.as));
-  return `<div class="nsum">📥 나이스(교외체험학습현황 목록) 엑셀 ${esc(NEIS.at)} 업로드 기준 — 완결 ${c.완결} · 상신중 ${c.상신중} · 미상신 ${c.미상신+c.미등록} · 나이스에 없음 ${c.없음}${only.length?` · <span title="${esc(only.map(r=>r.num+'번 '+r.name+' '+r.as).join(', '))}">앱에 없는 나이스 신청 ${only.length}건</span>`:''}</div>`}
+  return `<div class="nsum">📥 나이스(교외체험학습현황 목록) 엑셀 ${esc(NEIS.at)} 업로드 기준 — 완결 ${c.완결} · 상신중 ${c.상신중} · 미상신 ${c.미상신+c.미등록} · 나이스에 없음 ${c.없음}${only.length?` · <b>앱에 없는 나이스 신청 ${only.length}건:</b> ${only.map(r=>`${esc(r.num)}번 ${esc(r.name)}(${mdS(r.as)}~${mdS(r.ae)})`).join(', ')}`:''}</div>`}
 function roster(){ // 요청 날짜별 승인 명단(번호순) — 학생 공지용
   const G=groupByTerm(items.filter(x=>x.status==='승인'));
   const txt=G.map(([k,a])=>`[${k}] ${a.length}건\n`+a.map(line).join('\n')).join('\n\n');
