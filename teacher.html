@@ -12,7 +12,7 @@
    PICTURE: 오른쪽에 학생이 보낸 원본 양식 PDF
    COLOUR and TYPE: 학생 앱과 같은 짙은 초록 #1f4d3a, 보완 주황, 승인 초록 / Noto Sans KR
    LAYOUT: 왼쪽 목록, 오른쪽 서류와 결재. 900px 이하에서는 쌓기 */
-:root{color-scheme:light dark;--bg:light-dark(#f3f5f2,#141816);--card:light-dark(#fff,#1d2320);--ink:light-dark(#1b221e,#e7ece9);--mute:light-dark(#5d6a63,#9aa8a0);--line:light-dark(#d9dfdb,#33403a);--g:#1f4d3a;--g2:light-dark(#e3efe8,#22392e);--warn:#d9731e;--ok:#2e8b57}
+:root{color-scheme:light dark;--bg:light-dark(#f3f5f2,#141816);--card:light-dark(#fff,#1d2320);--ink:light-dark(#1b221e,#e7ece9);--mute:light-dark(#5d6a63,#9aa8a0);--line:light-dark(#d9dfdb,#33403a);--g:#1f4d3a;--gt:light-dark(#1f6b45,#8fdcb0);--g2:light-dark(#e3efe8,#22392e);--warn:#d9731e;--ok:#2e8b57}
 :root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
 *{box-sizing:border-box;min-width:0}
 [hidden]{display:none!important}
@@ -35,7 +35,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .check input{width:20px;height:20px;min-height:0;margin:0}
 #app{display:grid;grid-template-columns:minmax(380px,1fr) var(--dw,minmax(0,1.6fr));gap:20px}
 .tools{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
-.tools a{display:inline-flex;align-items:center;text-decoration:none;border:1px solid var(--g);background:var(--card);color:var(--g);font-weight:700;border-radius:999px;padding:6px 12px;font-size:13.5px;min-height:36px;box-sizing:border-box}
+.tools a{display:inline-flex;align-items:center;text-decoration:none;border:1px solid var(--gt);background:var(--card);color:var(--gt);font-weight:700;border-radius:999px;padding:6px 12px;font-size:13.5px;min-height:36px;box-sizing:border-box}
 .tools button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 12px;font:inherit;font-size:13.5px;cursor:pointer;min-height:36px}
 .tools button.on{background:var(--g2);border-color:var(--g)}
 #list{display:flex;flex-direction:column;gap:8px;max-height:calc(100vh - 230px);overflow:auto}
@@ -52,19 +52,19 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .dec .btn{min-height:52px;font-size:17px;font-weight:700;padding:10px 26px}
 .dec .btn.ok,.dec .btn.fix{min-width:130px}
 .edlog{margin:0 0 10px;font-size:14px}.edlog pre{white-space:pre-wrap;font:inherit;margin:6px 0 0;padding:8px 10px;border-radius:8px;background:light-dark(#fff6e0,#3a3018)}
-.dayh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:12px 2px 6px;font-weight:800;font-size:14px;color:var(--g);border-bottom:2px solid var(--g);padding-bottom:3px}
-.cpy{font:inherit;font-size:12.5px;font-weight:700;padding:3px 10px;border-radius:999px;border:1px solid var(--g);background:transparent;color:var(--g);cursor:pointer}
+.dayh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:12px 2px 6px;font-weight:800;font-size:14px;color:var(--gt);border-bottom:2px solid var(--gt);padding-bottom:3px}
+.cpy{font:inherit;font-size:12.5px;font-weight:700;padding:3px 10px;border-radius:999px;border:1px solid var(--gt);background:transparent;color:var(--gt);cursor:pointer}
 .rov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:12px}
 .rbox{background:var(--card,#fff);color:var(--ink,#111);width:min(640px,100%);max-height:88vh;border-radius:14px;display:flex;flex-direction:column}
 .rh{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 14px;border-bottom:1px solid var(--line,#ddd)}
-.rbody{overflow-y:auto;padding:4px 16px 16px}.rbody h4{margin:14px 0 6px;color:var(--g)}.rbody small{color:#888;font-weight:400}
+.rbody{overflow-y:auto;padding:4px 16px 16px}.rbody h4{margin:14px 0 6px;color:var(--gt)}.rbody small{color:#888;font-weight:400}
 .rbody table{width:100%;border-collapse:collapse;font-size:14px}.rbody td{padding:6px 6px;border-bottom:1px solid var(--line,#e5e5e5)}.rbody td:first-child{width:52px;color:#888}
 .tnote{white-space:pre-line;background:#e6f4ea;color:#1e6b3a;border-radius:10px;padding:10px 12px;font-weight:700;margin:0 0 10px}
 .btn.del{color:#c5221f;border-color:#e8a29d}
-.btn.ok.done{background:transparent!important;color:var(--g)!important;border:2px solid var(--g)!important}
+.btn.ok.done{background:transparent!important;color:var(--gt)!important;border:2px solid var(--gt)!important}
 .topdec{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.topdec .badge{flex:none}.topdec .btn{min-height:44px;font-size:15px;font-weight:700;padding:8px 18px}
 .empty{color:var(--mute);text-align:center;padding:60px 10px}
-#msg{min-height:1.4em;font-size:14px;color:var(--g);margin:6px 0}
+#msg{min-height:1.4em;font-size:14px;color:var(--gt);margin:6px 0}
 :root[data-theme=dark] #msg{color:#8fd1ae}
 .err{color:#e2553f!important}
 #pages{display:flex;flex-direction:column;gap:12px}

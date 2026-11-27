@@ -24,7 +24,7 @@
    PICTURE: 오른쪽 A4 미리보기
    COLOUR and TYPE: 짙은 초록 #1f4d3a, 흰 종이, 경고 코랄 #e2553f / Noto Sans KR
    LAYOUT: 왼쪽 입력 한 줄, 오른쪽 미리보기 고정. 900px 이하에서는 쌓기 */
-:root{color-scheme:light dark;--bg:light-dark(#f3f5f2,#141816);--card:light-dark(#fff,#1d2320);--ink:light-dark(#1b221e,#e7ece9);--mute:light-dark(#5d6a63,#9aa8a0);--line:light-dark(#d9dfdb,#33403a);--g:#1f4d3a;--g2:light-dark(#e3efe8,#22392e);--warn:#e2553f}
+:root{color-scheme:light dark;--bg:light-dark(#f3f5f2,#141816);--card:light-dark(#fff,#1d2320);--ink:light-dark(#1b221e,#e7ece9);--mute:light-dark(#5d6a63,#9aa8a0);--line:light-dark(#d9dfdb,#33403a);--g:#1f4d3a;--gt:light-dark(#1f6b45,#8fdcb0);--g2:light-dark(#e3efe8,#22392e);--warn:#e2553f}
 :root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
 *{box-sizing:border-box;min-width:0}
 [hidden]{display:none!important}
@@ -143,7 +143,7 @@ input[readonly]{background:light-dark(#f0f3f1,#1a201d);color:var(--mute)}
 .tedit [data-sig]{display:none}.tedit #actRow #reset{display:none}
 .lrow .cm.ed{background:light-dark(#fff6e0,#3a3018);border-left-color:#e0a100}.lrow .cm.ed span{font-weight:400;font-size:12px;color:var(--mute)}
 .psel{display:block;width:100%;text-align:left;margin:0 0 6px;font:inherit;font-size:14px;padding:8px 10px;border-radius:8px;border:1px dashed var(--line);background:var(--card);color:var(--mute);cursor:pointer}
-.psel small{font-size:12px}.psel.on{color:var(--g);border-style:solid;border-color:var(--g)}
+.psel small{font-size:12px}.psel.on{color:var(--gt);border-style:solid;border-color:var(--gt)}
 .psheet{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:flex-end;justify-content:center}
 .pbox{background:var(--card);color:var(--ink);width:min(560px,100%);max-height:80vh;overflow:hidden;border-radius:16px 16px 0 0;display:flex;flex-direction:column}
 @media(min-width:700px){.psheet{align-items:center}.pbox{border-radius:16px}}
@@ -176,7 +176,7 @@ input[readonly]{background:light-dark(#f0f3f1,#1a201d);color:var(--mute)}
 .bad{border-color:var(--warn)!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--warn) 35%,transparent)}
 #forms.bad{border:0;box-shadow:none;outline:2px solid var(--warn);outline-offset:4px;border-radius:8px}
 #plans.bad{box-shadow:none}
-#msg{font-size:14px;color:var(--g);min-height:1.2em;margin-bottom:6px}
+#msg{font-size:14px;color:var(--gt);min-height:1.2em;margin-bottom:6px}
 :root[data-theme=dark] #msg{color:#8fd1ae}
 #pv{background:light-dark(#dfe5e1,#0c0f0d);border-radius:14px;padding:14px}
 .shell{margin:0 auto 14px;box-shadow:0 2px 10px rgba(0,0,0,.18);overflow:hidden;background:#fff}
