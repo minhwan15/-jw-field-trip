@@ -20,7 +20,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 'Noto Sans KR
 header{background:var(--g);color:#fff;padding:16px max(4vw,16px);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 header h1{margin:0;font-size:clamp(20px,2.6vw,26px);line-height:1.2}
 header span{opacity:.85;font-size:14px}
-main{max-width:1400px;margin:auto;padding:20px max(4vw,16px) 60px}
+main{max-width:none;margin:auto;padding:20px max(2vw,16px) 40px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
 label{display:block;font-size:13px;color:var(--mute)}
 input,select,textarea{width:100%;font:inherit;font-size:16px;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:light-dark(#fff,#111513);color:var(--ink);min-height:44px;margin-top:3px}
@@ -33,12 +33,12 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 #login .row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
 .check{display:flex;gap:8px;align-items:center;font-size:14px;margin:4px 0 12px;color:var(--ink)}
 .check input{width:20px;height:20px;min-height:0;margin:0}
-#app{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:20px}
+#app{display:grid;grid-template-columns:minmax(320px,420px) minmax(0,1fr);gap:20px}
 .tools{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .tools a{display:inline-flex;align-items:center;text-decoration:none;border:1px solid var(--g);background:var(--card);color:var(--g);font-weight:700;border-radius:999px;padding:6px 12px;font-size:13.5px;min-height:36px;box-sizing:border-box}
 .tools button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 12px;font:inherit;font-size:13.5px;cursor:pointer;min-height:36px}
 .tools button.on{background:var(--g2);border-color:var(--g)}
-#list{display:flex;flex-direction:column;gap:8px;max-height:75vh;overflow:auto}
+#list{display:flex;flex-direction:column;gap:8px;max-height:calc(100vh - 230px);overflow:auto}
 .it{text-align:left;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:10px 12px;cursor:pointer;font:inherit;color:var(--ink);width:100%}
 .it.on{border-color:var(--g);box-shadow:0 0 0 2px var(--g2)}
 .it .t{display:flex;justify-content:space-between;gap:8px;align-items:center}
@@ -136,26 +136,34 @@ const WDK='일월화수목금토';
 function dayLabel(k){const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(k);if(!m)return k||'날짜 없음';const t=new Date(+m[1],+m[2]-1,+m[3]);return `${+m[2]}/${+m[3]}(${WDK[t.getDay()]})`}
 function groupByDay(L){const g={};L.forEach(x=>{const k=String(x.at||'').slice(0,10);(g[k]=g[k]||[]).push(x)});
   return Object.keys(g).sort().reverse().map(k=>[k,g[k].sort((a,b)=>(+a.num||0)-(+b.num||0)||String(a.doc).localeCompare(String(b.doc)))])}
+const TERMS=window.JW_TERMS||[];
+const startOfP=x=>(String(x.period||'').match(/\d{4}-\d{2}-\d{2}/)||[''])[0];
+const mdS=v=>{const m=/^\d{4}-(\d{2})-(\d{2})/.exec(v||'');return m?`${+m[1]}/${+m[2]}`:''};
+function termOf(x){const st=startOfP(x);const t=TERMS.find(t=>st>=t.s&&st<=t.e);return t?`${t.n} (${mdS(t.s)}~${mdS(t.e)})`:'자유 기간'}
+function groupByTerm(L){const order=[...TERMS.map(t=>`${t.n} (${mdS(t.s)}~${mdS(t.e)})`),'자유 기간'],g={};
+  L.forEach(x=>{const k=termOf(x);(g[k]=g[k]||[]).push(x)});
+  return order.filter(k=>g[k]).map(k=>[k,g[k].sort((a,b)=>(+a.num||0)-(+b.num||0)||startOfP(a).localeCompare(startOfP(b))||String(a.doc).localeCompare(String(b.doc)))])}
 function roster(){ // 요청 날짜별 승인 명단(번호순) — 학생 공지용
-  const G=groupByDay(items.filter(x=>x.status==='승인'));
-  const txt=G.map(([k,a])=>`[${dayLabel(k)} 요청]\n`+a.map(x=>`${x.num}번 ${x.name} · ${x.doc} · ${String(x.period||'').replace(/(\d{4})-(\d{2})-(\d{2})/g,(m,y,mo,da)=>`${+mo}/${+da}`)}`).join('\n')).join('\n\n');
+  const G=groupByTerm(items.filter(x=>x.status==='승인'));
+  const txt=G.map(([k,a])=>`[${k}]\n`+a.map(x=>`${x.num}번 ${x.name} · ${x.doc} · ${String(x.period||'').replace(/(\d{4})-(\d{2})-(\d{2})/g,(m,y,mo,da)=>`${+mo}/${+da}`)}`).join('\n')).join('\n\n');
   const head=`✅ 교외체험학습 승인 명단 (${$('#who').textContent||''})`;
   const ov=document.createElement('div');ov.className='rov';
   ov.innerHTML=`<div class="rbox"><div class="rh"><b>${esc(head)}</b><span><button class="btn" id="rCopy">텍스트 복사</button> <button class="btn" id="rClose">닫기</button></span></div>
-  <div class="rbody">${G.map(([k,a])=>`<h4>${esc(dayLabel(k))} 요청 <small>${a.length}건</small></h4><table>${a.map(x=>`<tr><td>${esc(x.num)}번</td><td><b>${esc(x.name)}</b></td><td>${esc(x.doc)}</td><td>${esc(x.period)}</td></tr>`).join('')}</table>`).join('')||'<p>승인된 서류가 없어요.</p>'}</div></div>`;
+  <div class="rbody">${G.map(([k,a])=>`<h4>${esc(k)} <small>${a.length}건</small></h4><table>${a.map(x=>`<tr><td>${esc(x.num)}번</td><td><b>${esc(x.name)}</b></td><td>${esc(x.doc)}</td><td>${esc(x.period)}</td></tr>`).join('')}</table>`).join('')||'<p>승인된 서류가 없어요.</p>'}</div></div>`;
   document.body.append(ov);
   ov.onclick=e=>{if(e.target===ov||e.target.id==='rClose')ov.remove()};
   ov.querySelector('#rCopy').onclick=async e=>{const t=head+'\n\n'+txt;try{await navigator.clipboard.writeText(t);e.target.textContent='복사됨 ✔'}catch(err){const ta=document.createElement('textarea');ta.value=t;document.body.append(ta);ta.select();document.execCommand('copy');ta.remove();e.target.textContent='복사됨 ✔'}};
 }
 function drawList(){
   drawFilters();
-  const f=FIL.find(x=>x[0]===filter)[2],L=items.filter(f);
+  const f=FIL.find(x=>x[0]===filter)[2];let L=items.filter(f);
   const card=x=>`<button class="it ${cur&&cur.id===x.id?'on':''}" data-id="${esc(x.id)}"><div class="t"><b>${esc(x.grade)}-${esc(x.cls)} ${esc(x.num)}번 ${esc(x.name)}</b>${badge(x.status)}</div>
     <div class="s">${esc(x.doc)} · ${esc(x.period)}${x.dest?` · ${esc(x.dest)}`:''}</div><div class="s">요청 ${esc(x.at)}${x.count>1?` (${esc(x.count)}번째)`:''}</div></button>`;
   if(!L.length){$('#list').innerHTML='<p class="empty">해당하는 요청이 없어요.</p>';return}
+  if(filter==='전체'){const P=x=>/대기/.test(x.status)?0:x.status==='보완 요청'?1:2;L=[...L].sort((a,b)=>P(a)-P(b)||String(b.at).localeCompare(String(a.at)))}
   if(filter!=='승인'){$('#list').innerHTML=L.map(card).join('');return}
-  const G=groupByDay(L);
-  $('#list').innerHTML=`<button class="btn ok" id="bRoster" style="width:100%;margin-bottom:8px">📋 승인 명단 보기 (학생 공지용)</button>`+G.map(([k,a])=>`<div class="dayh">${esc(dayLabel(k))} 요청 · ${a.length}건</div>${a.map(card).join('')}`).join('');
+  const G=groupByTerm(L);
+  $('#list').innerHTML=`<button class="btn ok" id="bRoster" style="width:100%;margin-bottom:8px">📋 승인 명단 보기 (학생 공지용)</button>`+G.map(([k,a])=>`<div class="dayh">${esc(k)} · ${a.length}건</div>${a.map(card).join('')}`).join('');
   $('#bRoster').onclick=roster;
 }
 async function load(){
