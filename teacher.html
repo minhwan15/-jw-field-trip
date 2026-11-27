@@ -38,11 +38,14 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .tools a{display:inline-flex;align-items:center;text-decoration:none;border:1px solid var(--gt);background:var(--card);color:var(--gt);font-weight:700;border-radius:999px;padding:6px 12px;font-size:13.5px;min-height:36px;box-sizing:border-box}
 .tools button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 12px;font:inherit;font-size:13.5px;cursor:pointer;min-height:36px}
 .tools button.on{background:var(--g2);border-color:var(--g)}
-#list{display:flex;flex-direction:column;gap:8px;max-height:calc(100vh - 230px);overflow:auto}
+#list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;align-content:start;max-height:calc(100vh - 230px);overflow:auto}
+#list>.dayh,#list>#bRoster,#list>.empty{grid-column:1/-1}
 .it{text-align:left;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:10px 12px;cursor:pointer;font:inherit;color:var(--ink);width:100%}
 .it.on{border-color:var(--g);box-shadow:0 0 0 2px var(--g2)}
 .it .t{display:flex;justify-content:space-between;gap:8px;align-items:center}
-.it .s{font-size:13px;color:var(--mute);margin-top:2px}
+.it .s{font-size:12.5px;color:var(--mute);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.it .t small{font-weight:500;font-size:12px;color:var(--mute);margin-left:4px}
+.it{padding:8px 11px!important}
 .badge{display:inline-block;border-radius:999px;padding:2px 10px;font-size:12.5px;font-weight:700;color:#fff;background:#6b7a72;white-space:nowrap}
 .badge.ok{background:var(--ok)}.badge.fix{background:var(--warn)}
 #detail .pdf{width:100%;height:78vh;border:1px solid var(--line);border-radius:10px;background:#fff}
@@ -164,8 +167,9 @@ function roster(){ // 요청 날짜별 승인 명단(번호순) — 학생 공�
 function drawList(){
   drawFilters();
   const f=FIL.find(x=>x[0]===filter)[2];let L=items.filter(f);
-  const card=x=>`<button class="it ${cur&&cur.id===x.id?'on':''}" data-id="${esc(x.id)}"><div class="t"><b>${esc(x.grade)}-${esc(x.cls)} ${esc(x.num)}번 ${esc(x.name)}</b>${badge(x.status)}</div>
-    <div class="s">${esc(x.doc)} · ${esc(x.period)}${x.dest?` · ${esc(x.dest)}`:''}</div><div class="s">요청 ${esc(x.at)}${x.count>1?` (${esc(x.count)}번째)`:''}</div></button>`;
+  const sp=v=>String(v||'').replace(/(\d{4})-(\d{2})-(\d{2})/g,(m,y,mo,da)=>`${+mo}/${+da}`).replace(/\s*~\s*/,'~');
+  const card=x=>`<button class="it ${cur&&cur.id===x.id?'on':''}" data-id="${esc(x.id)}"><div class="t"><b>${esc(x.num)}번 ${esc(x.name)} <small>${esc(x.doc)}</small></b>${badge(x.status)}</div>
+    <div class="s" title="${esc(x.period)} · ${esc(x.dest||'')} · 요청 ${esc(x.at)}">${esc(sp(x.period))}${x.dest?` · ${esc(x.dest)}`:''} · 요청 ${esc(sp(String(x.at||'').slice(0,16)))}${x.count>1?` (${esc(x.count)}번째)`:''}</div></button>`;
   if(!L.length){$('#list').innerHTML='<p class="empty">해당하는 요청이 없어요.</p>';return}
   if(filter==='전체'){const P=x=>/대기/.test(x.status)?0:x.status==='보완 요청'?1:2;L=[...L].sort((a,b)=>P(a)-P(b)||String(b.at).localeCompare(String(a.at)))}
   if(filter!=='승인'){$('#list').innerHTML=L.map(card).join('');return}
