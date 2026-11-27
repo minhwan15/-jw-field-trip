@@ -33,7 +33,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 #login .row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
 .check{display:flex;gap:8px;align-items:center;font-size:14px;margin:4px 0 12px;color:var(--ink)}
 .check input{width:20px;height:20px;min-height:0;margin:0}
-#app{display:grid;grid-template-columns:minmax(320px,420px) minmax(0,1fr);gap:20px}
+#app{display:grid;grid-template-columns:minmax(380px,1fr) var(--dw,minmax(0,1.6fr));gap:20px}
 .tools{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .tools a{display:inline-flex;align-items:center;text-decoration:none;border:1px solid var(--g);background:var(--card);color:var(--g);font-weight:700;border-radius:999px;padding:6px 12px;font-size:13.5px;min-height:36px;box-sizing:border-box}
 .tools button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 12px;font:inherit;font-size:13.5px;cursor:pointer;min-height:36px}
@@ -68,7 +68,9 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 :root[data-theme=dark] #msg{color:#8fd1ae}
 .err{color:#e2553f!important}
 #pages{display:flex;flex-direction:column;gap:12px}
-.pg{position:relative;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#fff}
+.pgsticky{}
+@media(min-width:901px){#app>div:first-child{position:sticky;top:12px;align-self:start}}
+.pg{position:relative;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#fff;width:min(100%,var(--pw,100%));margin:0 auto}
 .pg canvas{display:block;width:100%;height:auto}
 .hl{position:absolute;background:rgba(255,40,40,.30);outline:2px solid rgba(215,0,0,.85);border-radius:2px;mix-blend-mode:multiply;pointer-events:none}
 .hl.w{background:rgba(255,170,0,.32);outline-color:rgba(220,130,0,.9)}
@@ -286,13 +288,21 @@ function audit(d,item){
   if(!d.gName)E('보호자 서명란 이름이 비어 있어요',K.pn);
   return {R,P,rows};
 }
+function sizeDetail(){ // PC: 서식 한 장이 화면 높이에 딱 맞게 고정, 남는 폭은 왼쪽 목록에
+  const app=$('#app');if(!app)return;
+  if(innerWidth<=900){app.style.removeProperty('--pw');app.style.removeProperty('--dw');return}
+  const pw=Math.round((innerHeight-150)*595.28/841.89); /* 아래 고정 버튼 줄만큼 뺌 */
+  app.style.setProperty('--pw',pw+'px');
+  app&&app.style.setProperty('--dw',Math.max(680,Math.min(pw+64,innerWidth-440))+'px');
+}
+sizeDetail();addEventListener('resize',()=>{sizeDetail()});
 async function drawPages(){
   pageEls=[];const box=$('#pages');if(!pdfBytes||!box)return;
   if(!window.pdfjsLib){box.innerHTML=`<iframe class="pdf" src="${pdfUrl}" title="학생이 보낸 서류" style="width:100%;height:78vh;border:0"></iframe>`;return}
   pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   const doc=await pdfjsLib.getDocument({data:pdfBytes.slice()}).promise;box.innerHTML='';
   for(let i=1;i<=doc.numPages;i++){
-    const page=await doc.getPage(i),vp0=page.getViewport({scale:1}),sc=Math.min(2.2,Math.max(1.2,(box.clientWidth||800)*(devicePixelRatio||1)/vp0.width));
+    const page=await doc.getPage(i),vp0=page.getViewport({scale:1}),cw=Math.min(box.clientWidth||800,parseFloat(getComputedStyle($('#app')).getPropertyValue('--pw'))||1e9),sc=Math.min(2.4,Math.max(1.2,cw*(devicePixelRatio||1)/vp0.width));
     const vp=page.getViewport({scale:sc}),c=document.createElement('canvas');c.width=vp.width;c.height=vp.height;
     await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
     const w=document.createElement('div');w.className='pg';w.append(c);box.append(w);pageEls.push({w,c,vp0});
