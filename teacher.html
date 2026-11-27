@@ -66,7 +66,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .rbox{background:var(--card,#fff);color:var(--ink,#111);width:min(640px,100%);max-height:88vh;border-radius:14px;display:flex;flex-direction:column}
 .rh{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 14px;border-bottom:1px solid var(--line,#ddd)}
 .rbody{overflow-y:auto;padding:4px 16px 16px}.rbody h4{margin:14px 0 6px;color:var(--gt)}.rbody small{color:#888;font-weight:400}
-.rbody table{width:100%;border-collapse:collapse;font-size:14px}.rbody td{padding:6px 6px;border-bottom:1px solid var(--line,#e5e5e5)}.rbody td:first-child{width:52px;color:#888}
+.rbody table{width:100%;border-collapse:collapse;font-size:14px}.rbody td{padding:6px 6px;border-bottom:1px solid var(--line,#e5e5e5)}.rbody td:first-child{width:52px;color:#888}.rbody td small{color:#888}
 .tnote{white-space:pre-line;background:#e6f4ea;color:#1e6b3a;border-radius:10px;padding:10px 12px;font-weight:700;margin:0 0 10px}
 .btn.del{color:#c5221f;border-color:#e8a29d}
 .btn.ok.done{background:transparent!important;color:var(--gt)!important;border:2px solid var(--gt)!important}
@@ -154,8 +154,10 @@ function termOf(x){const st=startOfP(x);const t=TERMS.find(t=>st>=t.s&&st<=t.e);
 function groupByTerm(L){const order=[...TERMS.map(t=>`${t.n} (${mdS(t.s)}~${mdS(t.e)})`),'자유 기간'],g={};
   L.forEach(x=>{const k=termOf(x);(g[k]=g[k]||[]).push(x)});
   return [...order.slice(0,-1).reverse(),'자유 기간'].filter(k=>g[k]).map(k=>[k,g[k].sort((a,b)=>(+a.num||0)-(+b.num||0)||startOfP(a).localeCompare(startOfP(b))||String(a.doc).localeCompare(String(b.doc)))])}
-function termText(k,a){const seen=new Set();const L=a.filter(x=>x.doc==='신청서'||!a.some(y=>y.num===x.num&&y.doc==='신청서')).filter(x=>!seen.has(x.num)&&seen.add(x.num));
-  return `✅ ${k} 체험학습 검토완료 명단 (${L.length}명)\n`+L.map(x=>`${x.num}번 ${x.name}`).join('\n')}
+const spd=v=>String(v||'').replace(/(\d{4})-(\d{2})-(\d{2})/g,(m,y,mo,da)=>`${+mo}/${+da}`).replace(/\s*~\s*/,'~');
+const nTxt=x=>{const n=neisOf(x);return n?` · 나이스 ${n.st==='미등록'?'미상신':n.st}${n.diff?` (⚠${n.diff})`:''}`:''};
+const line=x=>`${x.num}번 ${x.name} · ${x.doc} · ${spd(x.period)}${x.dest?` · ${x.dest}`:''}${nTxt(x)}`;
+function termText(k,a){return `✅ ${k} 체험학습 검토완료 명단 (${a.length}건)\n`+a.map(line).join('\n')}
 async function copyText(t,btn){try{await navigator.clipboard.writeText(t)}catch(err){const ta=document.createElement('textarea');ta.value=t;document.body.append(ta);ta.select();document.execCommand('copy');ta.remove()}
   if(btn){const o=btn.textContent;btn.textContent='복사됨 ✔';setTimeout(()=>btn.textContent=o,1500)}}
 /* ── 나이스 엑셀(교외체험학습 목록) 대조: 완결 / 상신중 / 미상신 ── */
@@ -195,13 +197,21 @@ function neisSummary(){if(!NEIS)return '';const L=items.filter(x=>x.status!=='�
   return `<div class="nsum">📥 나이스 엑셀(${esc(NEIS.at)}) 대조 — 완결 ${c.완결} · 상신중 ${c.상신중} · 미상신 ${c.미상신+c.미등록} · 나이스에 없음 ${c.없음}${only.length?` · <span title="${esc(only.map(r=>r.num+'번 '+r.name+' '+r.as).join(', '))}">앱에 없는 나이스 신청 ${only.length}건</span>`:''}</div>`}
 function roster(){ // 요청 날짜별 승인 명단(번호순) — 학생 공지용
   const G=groupByTerm(items.filter(x=>x.status==='승인'));
-  const txt=G.map(([k,a])=>`[${k}]\n`+a.map(x=>`${x.num}번 ${x.name} · ${x.doc} · ${String(x.period||'').replace(/(\d{4})-(\d{2})-(\d{2})/g,(m,y,mo,da)=>`${+mo}/${+da}`)}`).join('\n')).join('\n\n');
+  const txt=G.map(([k,a])=>`[${k}] ${a.length}건\n`+a.map(line).join('\n')).join('\n\n');
   const head=`✅ 교외체험학습 검토완료 명단 (${$('#who').textContent||''})`;
   const ov=document.createElement('div');ov.className='rov';
-  ov.innerHTML=`<div class="rbox"><div class="rh"><b>${esc(head)}</b><span><button class="btn" id="rCopy">텍스트 복사</button> <button class="btn" id="rClose">닫기</button></span></div>
-  <div class="rbody">${G.map(([k,a],gi)=>`<h4>${esc(k)} <small>${a.length}건</small> <button class="cpy" data-rc="${gi}">📋 이 텀 명단 복사</button></h4><table>${a.map(x=>`<tr><td>${esc(x.num)}번</td><td><b>${esc(x.name)}</b></td><td>${esc(x.doc)}</td><td>${esc(x.period)}</td></tr>`).join('')}</table>`).join('')||'<p>검토완료된 서류가 없어요.</p>'}</div></div>`;
+  ov.innerHTML=`<div class="rbox"><div class="rh"><b>${esc(head)}</b><span><button class="btn" id="rCopy">텍스트 복사</button> <button class="btn" id="rPrint">🖨 인쇄</button> <button class="btn" id="rClose">닫기</button></span></div>
+  <div class="rbody">${G.map(([k,a],gi)=>`<h4>${esc(k)} <small>${a.length}건</small> <button class="cpy" data-rc="${gi}">📋 이 텀 명단 복사</button></h4><table>${a.map(x=>`<tr><td>${esc(x.num)}번</td><td><b>${esc(x.name)}</b> <small>${esc(x.doc)}</small></td><td>${esc(spd(x.period))}</td><td>${esc(x.dest||'')}</td>${NEIS?`<td>${neisBadge(x)}</td>`:''}</tr>`).join('')}</table>`).join('')||'<p>검토완료된 서류가 없어요.</p>'}</div></div>`;
   document.body.append(ov);
   ov.onclick=e=>{if(e.target===ov||e.target.id==='rClose')ov.remove();const b=e.target.closest('[data-rc]');if(b){const [k,a]=G[+b.dataset.rc];copyText(termText(k,a),b)}};
+  ov.querySelector('#rPrint').onclick=()=>{
+    const w=window.open('','_blank');if(!w){say('팝업이 막혀 있어요. 팝업을 허용해 주세요.');return}
+    const css='body{font-family:"Noto Sans KR",sans-serif;margin:16mm;color:#111}h1{font-size:18px;margin:0 0 4px}p{margin:0 0 12px;color:#555;font-size:12px}h2{font-size:15px;margin:16px 0 6px;border-bottom:2px solid #1f4d3a;padding-bottom:3px}table{width:100%;border-collapse:collapse;font-size:12.5px}th,td{border:1px solid #bbb;padding:4px 6px;text-align:left}th{background:#eef3ef}td:first-child{width:44px;text-align:center}.nb{font-weight:700}.nok{color:#1e7a46}.nmid{color:#9a6a00}.nno{color:#c5221f}.nnone{color:#777}@page{size:A4;margin:10mm}';
+    const nb=x=>{const n=neisOf(x);if(!n)return '';const c={완결:'nok',상신중:'nmid',미상신:'nno',미등록:'nno',없음:'nnone'}[n.st];return `<span class="nb ${c}">${n.st==='미등록'?'미상신':n.st}</span>${n.diff?` <span class="nno">⚠${esc(n.diff)}</span>`:''}`};
+    w.document.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>${esc(head)}</title><style>${css}</style></head><body><h1>${esc(head)}</h1><p>${new Date().toLocaleString('ko-KR')} 기준${NEIS?` · 나이스 엑셀 ${esc(NEIS.at)}`:''}</p>`+
+      G.map(([k,a])=>`<h2>${esc(k)} · ${a.length}건</h2><table><tr><th>번호</th><th>이름</th><th>서류</th><th>기간</th><th>목적지</th>${NEIS?'<th>나이스</th>':''}</tr>${a.map(x=>`<tr><td>${esc(x.num)}</td><td><b>${esc(x.name)}</b></td><td>${esc(x.doc)}</td><td>${esc(spd(x.period))}</td><td>${esc(x.dest||'')}</td>${NEIS?`<td>${nb(x)}</td>`:''}</tr>`).join('')}</table>`).join('')+
+      `<script>onload=()=>setTimeout(()=>print(),300)<\/script></body></html>`);w.document.close();
+  };
   ov.querySelector('#rCopy').onclick=async e=>{const t=head+'\n\n'+txt;try{await navigator.clipboard.writeText(t);e.target.textContent='복사됨 ✔'}catch(err){const ta=document.createElement('textarea');ta.value=t;document.body.append(ta);ta.select();document.execCommand('copy');ta.remove();e.target.textContent='복사됨 ✔'}};
 }
 function drawList(){
