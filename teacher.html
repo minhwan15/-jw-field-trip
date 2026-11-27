@@ -36,6 +36,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 #app{display:grid;grid-template-columns:minmax(380px,1fr) var(--dw,minmax(0,1.6fr));gap:20px}
 .tools{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .tbar{align-items:center;gap:5px}.tbar button,.tbar a{padding:5px 9px!important;font-size:13px!important;min-height:32px!important}.tbar #filters{display:contents}.tbar #bCC{margin-left:auto}
+.tbar #bNeis{background:#c9861a!important;border-color:#c9861a!important;color:#fff!important;font-weight:800}.tbar #bNeis:hover{filter:brightness(1.08)}
 .tools a{display:inline-flex;align-items:center;text-decoration:none;border:1px solid var(--gt);background:var(--card);color:var(--gt);font-weight:700;border-radius:999px;padding:6px 12px;font-size:13.5px;min-height:36px;box-sizing:border-box}
 .tools button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 12px;font:inherit;font-size:13.5px;cursor:pointer;min-height:36px}
 .tools button.on{background:var(--g2);border-color:var(--g)}
@@ -115,7 +116,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
   </section>
   <section id="app" hidden>
     <div>
-      <div class="tools tbar"><span id="filters" class="tools" style="margin:0"></span><button id="bRefresh">새로고침</button><button id="bLogout">로그아웃</button><button id="bNeis" title="나이스 교외체험학습 목록 엑셀을 올리면 나이스 처리 상태를 함께 보여 줘요">📥 나이스 엑셀</button><input type="file" id="fNeis" accept=".xlsx,.xls" hidden><a id="bCC" href="https://class-calendar-beryl.vercel.app" target="_blank" rel="noopener">📅 쉬운출결 열기</a></div>
+      <div class="tools tbar"><span id="filters" class="tools" style="margin:0"></span><button id="bRefresh">새로고침</button><button id="bLogout">로그아웃</button><button id="bNeis" title="나이스에서 내려받은 교외체험학습현황 목록 엑셀을 올리면 나이스 처리 상태(완결·상신중·미상신)를 함께 보여 줘요">📥 나이스(교외체험학습현황 목록) 엑셀 업로드</button><input type="file" id="fNeis" accept=".xlsx,.xls" hidden><a id="bCC" href="https://class-calendar-beryl.vercel.app" target="_blank" rel="noopener">📅 쉬운출결 열기</a></div>
       <div id="msg"></div>
       <div id="list"></div>
     </div>
@@ -194,7 +195,7 @@ function neisBadge(x){const n=neisOf(x);if(!n)return '';
   return `<span class="nb ${cls}" title="${esc(n.raw||'')}">나이스 ${n.st==='없음'?'없음':n.st}</span>${n.diff?`<span class="nb nno" title="앱과 나이스 기간이 달라요">⚠ ${esc(n.diff)}</span>`:''}`}
 function neisSummary(){if(!NEIS)return '';const L=items.filter(x=>x.status!=='작성 중'),c={완결:0,상신중:0,미상신:0,미등록:0,없음:0};L.forEach(x=>{const n=neisOf(x);if(n)c[n.st]++});
   const app=new Set(L.map(x=>x.num+'|'+pr(x)[0])),only=NEIS.rows.filter(r=>!app.has(r.num+'|'+r.as));
-  return `<div class="nsum">📥 나이스 엑셀(${esc(NEIS.at)}) 대조 — 완결 ${c.완결} · 상신중 ${c.상신중} · 미상신 ${c.미상신+c.미등록} · 나이스에 없음 ${c.없음}${only.length?` · <span title="${esc(only.map(r=>r.num+'번 '+r.name+' '+r.as).join(', '))}">앱에 없는 나이스 신청 ${only.length}건</span>`:''}</div>`}
+  return `<div class="nsum">📥 나이스(교외체험학습현황 목록) 엑셀 ${esc(NEIS.at)} 업로드 기준 — 완결 ${c.완결} · 상신중 ${c.상신중} · 미상신 ${c.미상신+c.미등록} · 나이스에 없음 ${c.없음}${only.length?` · <span title="${esc(only.map(r=>r.num+'번 '+r.name+' '+r.as).join(', '))}">앱에 없는 나이스 신청 ${only.length}건</span>`:''}</div>`}
 function roster(){ // 요청 날짜별 승인 명단(번호순) — 학생 공지용
   const G=groupByTerm(items.filter(x=>x.status==='승인'));
   const txt=G.map(([k,a])=>`[${k}] ${a.length}건\n`+a.map(line).join('\n')).join('\n\n');
